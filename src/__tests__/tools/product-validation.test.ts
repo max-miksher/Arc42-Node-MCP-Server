@@ -1,0 +1,126 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, symlinkSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { createTestContext } from '../fixtures/test-helpers.js';
+import type { ToolContext } from '../../types.js';
+import { arc42InitHandler } from '../../tools/arc42-init.js';
+import { handleToolCall } from '../../tools/index.js';
+import { markdown, today } from '../../product-workspace.js';
+
+describe('product validation and gradual migration', () => {
+  let context: ToolContext;
+  let cleanup: () => void;
+  let requirement: string;
+  const blocks = 'architecture/05-building-block-view';
+  const adr = 'architecture/09-architecture-decisions/ADR-0001-storage.md';
+  function put(path: string, content: string) {
+    const absolute = join(context.projectPath, 'docs', path);
+    mkdirSync(dirname(absolute), { recursive: true });
+    writeFileSync(absolute, content);
+  }
+  async function call(name: string, args: Record<string, unknown> = {}) {
+    const response = await handleToolCall(name, args, context);
+    return JSON.parse(response.content[0].text);
+  }
+  async function codes() {
+    const result = await call('arc42-validate');
+    expect(result.data).toBeDefined();
+    return result.data.issues.map((issue: any) => issue.code);
+  }
+  beforeEach(async () => {
+    ({ context, cleanup } = createTestContext());
+    const result = await arc42InitHandler({ projectName: 'Test', profile: 'product' }, context);
+    requirement = result.data.requirement;
+  });
+  afterEach(() => cleanup());
+
+  it('validates a minimal project without pretending drafts are complete', async () => {
+    const result = await call('arc42-validate');
+    expect(result.success).toBe(true);
+    expect(result.data.valid).toBe(true);
+    expect(result.data.issues.some((issue: any) => issue.code === 'draft')).toBe(true);
+    expect(result.data.limits).toBeDefined();
+  });
+
+  it('checks mandatory metadata, real dates, unknown types, and Markdown outside architecture', async () => {
+    put('notes/bad.md', '# Missing metadata');
+    put('reference/date.md', markdown('Date', 'reference', '# Date').replace(today(), '2026-02-30'));
+    expect(await codes()).toEqual(expect.arrayContaining(['metadata']));
+    const validation = await call('arc42-validate');
+    expect(validation.data.valid).toBe(false);
+    expect(validation.data.issues.filter((issue: any) => issue.code === 'metadata')).toHaveLength(2);
+  });
+
+  it('checks inline/reference links, images, encoded Russian paths, fragments and ignores code examples', async () => {
+    put('notes/связи.md', markdown('Связи', 'note', `# Связи\n\n[req](../${encodeURI(requirement)}#требование)\n\n[bad][ref]\n\n[ref]: missing.md\n\n![img](missing.png)\n\n[anchor](#absent)\n\n\`[example](ignore.md)\`\n\n\`\`\`md\n[example](also-ignore.md)\n\`\`\``));
+    const result = await call('arc42-validate');
+    const links = result.data.issues.filter((issue: any) => issue.code === 'link');
+    expect(links).toHaveLength(3);
+    expect(links.map((issue: any) => issue.message).join(' ')).not.toContain('ignore.md');
+  });
+
+  it('checks superseded chains, missing targets and cycles', async () => {
+    put('notes/a.md', markdown('A', 'note', '# A', { status: 'superseded', superseded_by: 'notes/b.md' }));
+    put('notes/b.md', markdown('B', 'note', '# B', { status: 'superseded', superseded_by: 'notes/a.md' }));
+    expect(await codes()).toContain('superseded-cycle');
+    put('notes/b.md', markdown('B', 'note', '# B', { status: 'active', related: ['notes/a.md'] }));
+    expect(await codes()).toContain('inactive-reference');
+  });
+
+  it('enforces separate MADR structure and distinct document/decision statuses', async () => {
+    put(adr, markdown('Storage', 'adr', '# Storage\n\n## Context and Problem Statement\n\nPersist state.\n\n## Considered Options\n\n- Files\n- Database\n\n## Decision Outcome\n\nChosen option: Files, because it meets our needs.', { date: today(), decision_status: 'accepted', 'decision-makers': ['Bondar Maksim'] }));
+    expect((await codes()).includes('madr')).toBe(false);
+    put(adr, markdown('Storage', 'adr', '# Storage\n\n## Context\n\nIncomplete.', { decision_status: 'unknown' }));
+    expect(await codes()).toContain('madr');
+  });
+
+  it('checks nested blocks, evidence, parent role, and runtime participants', async () => {
+    const parent = `${blocks}/building-blocks/api/README.md`;
+    const child = `${blocks}/building-blocks/api/building-blocks/store/README.md`;
+    put(parent, markdown('API', 'architecture', '# API\n\nHTTP interface.', { kind: 'building-block', parent: `${blocks}/README.md` }));
+    put(child, markdown('Store', 'architecture', '# Store\n\nPersistence.', { kind: 'building-block', parent }));
+    expect(await codes()).toContain('decomposition');
+    put(child, markdown('Store', 'architecture', '# Store\n\nPersistence.', { kind: 'building-block', parent, decomposition: { trigger: 2, evidence: [requirement] } }));
+    put('architecture/06-runtime-view/scenarios/save.md', markdown('Save', 'architecture', '# Save\n\nAPI calls Store.', { kind: 'runtime-scenario', blocks: [parent, child] }));
+    expect((await codes()).includes('decomposition')).toBe(false);
+    expect((await codes()).includes('runtime-block')).toBe(false);
+    put('architecture/06-runtime-view/scenarios/bad.md', markdown('Bad', 'architecture', '# Bad', { kind: 'runtime-scenario', blocks: [requirement] }));
+    expect(await codes()).toContain('runtime-block');
+  });
+
+  it('rejects unsafe semantic creation before touching the filesystem', async () => {
+    const path = `${blocks}/building-blocks/missing/building-blocks/child/README.md`;
+    const result = await call('arc42-document', { action: 'create', path, content: markdown('Child', 'architecture', '# Child', { kind: 'building-block', parent: 'notes/unknown.md' }) });
+    expect(result.success).toBe(false);
+    expect(existsSync(join(context.projectPath, 'docs', path))).toBe(false);
+  });
+
+  it('inventories legacy read-only, identifies exact duplicates and reports limits/symlinks', async () => {
+    mkdirSync(join(context.projectPath, 'old'));
+    writeFileSync(join(context.projectPath, 'old/ARCH.md'), '# Architecture\n\nExisting content');
+    writeFileSync(join(context.projectPath, 'old/copy.md'), '# Architecture\n\nExisting content');
+    symlinkSync(context.projectPath, join(context.projectPath, 'old/link'));
+    const result = await call('arc42-inventory', { roots: ['old'] });
+    expect(result.success).toBe(true);
+    expect(result.data.files).toHaveLength(2);
+    expect(result.data.duplicates).toHaveLength(1);
+    expect(result.data.warnings).toContainEqual(expect.objectContaining({ code: 'symlink' }));
+    expect(readFileSync(join(context.projectPath, 'old/ARCH.md'), 'utf8')).toBe('# Architecture\n\nExisting content');
+    const limited = await call('arc42-inventory', { roots: ['old'], maxFiles: 1 });
+    expect(limited.data.truncated).toBe(true);
+  });
+
+  it('plans only explicit sources in the scope of an actual requirement without copying anything', async () => {
+    mkdirSync(join(context.projectPath, 'old'));
+    writeFileSync(join(context.projectPath, 'old/ARCH.md'), '# Architecture\n\nOriginal');
+    const target = 'architecture/03-context-and-scope/README.md';
+    const before = readFileSync(join(context.projectPath, 'old/ARCH.md'), 'utf8');
+    const result = await call('arc42-migration-plan', { requirement, items: [{ source: 'old/ARCH.md', target, reason: 'Describes the boundary affected by this requirement' }] });
+    expect(result.success).toBe(true);
+    expect(result.data.items[0].sourceHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.data.items[0].action).toBe('create');
+    expect(existsSync(join(context.projectPath, 'docs', target))).toBe(false);
+    expect(readFileSync(join(context.projectPath, 'old/ARCH.md'), 'utf8')).toBe(before);
+    expect((await call('arc42-migration-plan', { requirement: `${blocks}/README.md`, items: [{ source: 'old/ARCH.md', target, reason: 'Scope' }] })).success).toBe(false);
+  });
+});

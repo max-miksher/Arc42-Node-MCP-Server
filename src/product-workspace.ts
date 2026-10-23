@@ -7,6 +7,7 @@ import {
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { parse, stringify } from 'yaml';
 import { z } from 'zod';
+import { documentIssues } from './product-validation.js';
 import { ARC42_SECTIONS, type Arc42Section, type ToolContext, type ToolResponse, countWords } from './types.js';
 import { getSectionMetadata, getTemplateForFormat, getArc42ReferenceConfig, isLanguageCode } from './templates/index.js';
 
@@ -152,6 +153,8 @@ export function withProjectLock<T>(projectPath: string, action: () => T): T {
 export function writeDocument(workspace: ProductWorkspace, path: string, content: string, expectedHash?: string): void {
   parseDocument(content);
   withProjectLock(workspace.projectPath, () => {
+    const errors = documentIssues(workspace, path, content).filter(issue => issue.severity === 'error');
+    if (errors.length) throw new Error(errors.map(issue => issue.code + ': ' + issue.message).join('\n'));
     const absolute = safePath(workspace.root, path);
     if (!path.endsWith('.md')) throw new Error('Expected a .md document');
     const exists = existsSync(absolute);
