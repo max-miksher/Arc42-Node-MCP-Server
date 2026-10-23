@@ -1,3 +1,25 @@
+---
+title: Arc42 MCP Server — продуктовый форк
+type: index
+status: active
+updated: 2026-10-23
+---
+
+# Форк с продуктовым профилем
+
+<!-- Modified by Bondar Maksim: product profile, safe edits, validation and legacy planning. -->
+Эта ветка добавляет настраиваемую документацию в `docs/`, отдельные MADR,
+вложенные Building Blocks, runtime-сценарии и проверку метаданных/ссылок.
+Новые инструменты дополняют шесть исходных MCP tools; прежний режим и форматы сохраняются.
+
+Установка форка: [инструкция](docs/how-to/install.md).
+Контракт и ограничения: [product profile](docs/reference/product-profile.md).
+Skill: [.claude/skills/arc42-docs-mcp/SKILL.md](.claude/skills/arc42-docs-mcp/SKILL.md).
+Совместимость и проверки: [отчёт](docs/reports/profile-compatibility.md).
+
+Пакет форка пока не опубликован в npm. Примеры `npx @h2nguyen/...` ниже относятся
+к исходному серверу. Для новых функций подключай собранный `dist/index.js` своего форка.
+
 # Arc42 Node MCP Server
 
 > **AI-Assisted Architecture Documentation following the arc42 Template**

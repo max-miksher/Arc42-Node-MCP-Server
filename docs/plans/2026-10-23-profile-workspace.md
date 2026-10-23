@@ -1,11 +1,13 @@
 ---
 title: Доработка Arc42 MCP Server
 type: plan
-status: active
+status: deprecated
 updated: 2026-10-23
 ---
 
 # Конструкция
+
+План исполнен 2026-10-23. Текущий контракт: [product profile](../reference/product-profile.md); проверенный результат: [отчёт](../reports/profile-compatibility.md).
 
 Основание: [требование](../requirements/2026-10-23-profile-workspace/описание.md).
 
