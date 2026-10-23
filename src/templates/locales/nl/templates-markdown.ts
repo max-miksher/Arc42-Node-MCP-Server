@@ -36,23 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 ## Probleemstelling
 
-**Doel**: Beschrijft de essentiële vereisten en drijvende krachten die moeten worden overwogen bij de implementatie van de softwarearchitectuur en ontwikkeling van het systeem.
-
-### Essentiële Vereisten
-
-<!-- Lijst de top 3-5 functionele vereisten -->
-
-| ID | Vereiste | Prioriteit |
-|----|----------|------------|
-| REQ-1 | [Korte beschrijving] | Hoog |
-| REQ-2 | [Korte beschrijving] | Medium |
-
-### Functionaliteiten
-
-<!-- Essentiële functionaliteiten van het systeem -->
-
-- Functionaliteit 1: [Beschrijving]
-- Functionaliteit 2: [Beschrijving]
+Vat architectuurrelevante eisen samen en verwijs naar extern beheerde eisen. Maak of beheer hier geen eisen.
 
 ## Kwaliteitsdoelen
 
@@ -620,73 +604,12 @@ function getConceptsTemplate(): string {
 function getArchitectureDecisionsTemplate(): string {
   return `# 9. Architectuurbeslissingen
 
-**Doel**: Documenteert belangrijke, kostbare, kritieke of risicovolle architectuurbeslissingen inclusief motivatie.
+Overzicht van belangrijke architectuurbeslissingen en hun redenen. Verwijs naar afzonderlijke ADRs zonder inhoud, formaat of levenscyclus te beheren.
 
-## ADR-formaat
+| Beslissing | Architectuurimpact / reden | Externe ADR |
+|---|---|---|
 
-Elke beslissing volgt deze structuur:
-- **Context**: Wat is het probleem dat we aanpakken?
-- **Beslissing**: Wat we hebben besloten te doen
-- **Gevolgen**: Wat hierdoor makkelijker of moeilijker wordt
-
-## Beslissingslogboek
-
-### ADR-001: [Beslissingsnaam]
-
-**Datum**: [JJJJ-MM-DD]
-**Status**: [Voorgesteld | Geaccepteerd | Verouderd | Vervangen]
-**Beslissers**: [Namen]
-
-**Context**:
-
-[Beschrijf de krachten die spelen, technisch, politiek, sociaal en projectspecifiek. Deze krachten staan waarschijnlijk op gespannen voet met elkaar en moeten als zodanig worden benoemd.]
-
-**Beslissing**:
-
-[Beschrijf onze reactie op deze krachten. Hier nemen we onze beslissing.]
-
-**Gevolgen**:
-
-Positief:
-- [Voordeel 1]
-- [Voordeel 2]
-
-Negatief:
-- [Afweging 1]
-- [Afweging 2]
-
-Risico's:
-- [Risico 1 en mitigatie]
-
-### ADR-002: [Volgende beslissing]
-
-[Vergelijkbare structuur]
-
-## Beslissingscategorieën
-
-### Structurele Beslissingen
-
-| Beslissing | Motivatie | Datum |
-|------------|-----------|-------|
-| [Microservices vs Monolith] | [Waarom gekozen] | [Datum] |
-
-### Technologiebeslissingen
-
-| Component | Technologie | Overwogen Alternatief | Waarom Gekozen |
-|-----------|-------------|----------------------|----------------|
-| [Backend] | [Node.js] | [Python, Java] | [Redenen] |
-
-### Procesbeslissingen
-
-| Beslissing | Impact | Datum |
-|------------|--------|-------|
-| [Agile methodologie] | [Hoe het de architectuur beïnvloedt] | [Datum] |
-
-## Verouderde Beslissingen
-
-| Beslissing | Datum Verouderd | Reden | Vervangen door |
-|------------|-----------------|-------|----------------|
-| [Oude beslissing] | [Datum] | [Waarom verouderd] | [ADR-XXX] |
+Voeg indien beschikbaar een link naar de bestaande ADR toe.
 `;
 }
 

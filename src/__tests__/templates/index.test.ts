@@ -163,17 +163,19 @@ describe('templates', () => {
     describe('Section 09: Architecture Decisions', () => {
       const template = getTemplateForFormat('09_architecture_decisions', 'EN', 'markdown');
 
-      it('should include ADR format', () => {
+      it('should reference independently maintained ADRs', () => {
         expect(template).toContain('ADR');
       });
 
-      it('should include context and decision structure', () => {
-        expect(template).toContain('Context');
+      it('should summarize architectural impact and rationale', () => {
+        expect(template).toContain('Architectural impact / rationale');
         expect(template).toContain('Decision');
       });
 
-      it('should include consequences', () => {
-        expect(template).toContain('Consequences');
+      it('should not generate an inline ADR or prescribe its lifecycle', () => {
+        expect(template).not.toContain('ADR-001');
+        expect(template).not.toContain('Deciders');
+        expect(template).toContain('separately maintained');
       });
     });
 
@@ -239,7 +241,7 @@ describe('templates', () => {
       ALL_SECTIONS.forEach((section) => {
         const template = getTemplateForFormat(section, 'EN', 'markdown');
         // Templates should have substantial content with guidance
-        expect(template.length).toBeGreaterThan(500);
+        expect(template.length).toBeGreaterThan(section === '09_architecture_decisions' ? 200 : 500);
       });
     });
 

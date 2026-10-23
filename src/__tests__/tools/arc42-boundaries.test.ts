@@ -5,6 +5,7 @@ import { createTestContext } from '../fixtures/test-helpers.js';
 import { arc42InitHandler } from '../../tools/arc42-init.js';
 import { handleToolCall, TOOL_REGISTRY } from '../../tools/index.js';
 import { DEFAULT_SECTIONS, markdown } from '../../product-workspace.js';
+import { getTemplateForFormat, SUPPORTED_LANGUAGE_CODES } from '../../templates/index.js';
 import type { ToolContext } from '../../types.js';
 
 describe('arc42 responsibility boundary', () => {
@@ -65,4 +66,24 @@ describe('arc42 responsibility boundary', () => {
     expect((await call('arc42-document', { action: 'create', path: 'architecture/03-context-and-scope/interfaces/http.md', content: markdown('HTTP', 'architecture', '# HTTP\n\nPublic interface.', { section: '03_context_and_scope' }) })).success).toBe(true);
     expect((await call('arc42-document', { action: 'create', path: 'plans/work.md', content: markdown('Work', 'architecture', '# Work') })).success).toBe(false);
   });
+  it.each(SUPPORTED_LANGUAGE_CODES)('initializes and validates all arc42 sections in %s', async language => {
+    const targetFolder = join(context.projectPath, language);
+    expect((await arc42InitHandler({ projectName: 'Localized', profile: 'product', language, targetFolder }, context)).success).toBe(true);
+    const checked = await call('arc42-validate', { targetFolder });
+    expect(checked.success, JSON.stringify(checked.data?.issues)).toBe(true);
+    expect(checked.data.checkedFiles).toBe(13);
+  });
+
+  it.each(SUPPORTED_LANGUAGE_CODES)('generates overviews and architecture diagrams without external artifact templates in %s', language => {
+    for (const format of ['markdown', 'asciidoc'] as const) {
+      const decisions = getTemplateForFormat('09_architecture_decisions', language, format);
+      expect(decisions).toContain('ADR');
+      expect(decisions).not.toMatch(/ADR-00\d|decision_status|Deciders|Context and Problem Statement/);
+      expect(getTemplateForFormat('01_introduction_and_goals', language, format)).not.toMatch(/REQ-\d/);
+      for (const section of ['03_context_and_scope', '05_building_block_view', '07_deployment_view'] as const) {
+        expect(getTemplateForFormat(section, language, format)).not.toContain('C4_');
+      }
+    }
+  });
+
 });

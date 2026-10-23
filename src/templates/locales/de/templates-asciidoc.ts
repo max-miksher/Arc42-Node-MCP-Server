@@ -36,28 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 == Aufgabenstellung
 
-*Inhalt*: Kurzbeschreibung der fachlichen Aufgabenstellung, treibenden Kraefte, Extrakt (oder Abstract) der Anforderungen.
-Verweis auf (hoffentlich vorliegende) Anforderungsdokumente (mit Versionsbezeichnungen und Ablageorten).
-
-*Motivation*: Aus Sicht der spaeteren Nutzung ist die Unterstuetzung einer fachlichen Aufgabe oder Verbesserung der Qualitaet der eigentliche Beweggrund, ein neues System zu schaffen oder ein bestehendes zu modifizieren.
-
-=== Wesentliche Anforderungen
-
-// Listen Sie die Top 3-5 funktionalen Anforderungen auf
-
-[options="header",cols="1,3,1"]
-|===
-|ID |Anforderung |Prioritaet
-|ANF-1 |[Kurze Beschreibung] |Hoch
-|ANF-2 |[Kurze Beschreibung] |Mittel
-|===
-
-=== Features
-
-// Wesentliche Features des Systems
-
-* Feature 1: [Beschreibung]
-* Feature 2: [Beschreibung]
+Architekturrelevante Anforderungen kurz zusammenfassen und auf extern gepflegte Anforderungen verweisen. Anforderungen hier nicht erstellen oder verwalten.
 
 == Qualitaetsziele
 
@@ -145,19 +124,7 @@ Sie legt damit die externen Schnittstellen fest und zeigt damit auch die Verantw
 
 // Fuegen Sie hier ein Kontextdiagramm ein (PlantUML, Mermaid, oder Bild)
 
-[plantuml, fachlicher-kontext, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
-
-Person(benutzer, "Benutzer", "Systembenutzer")
-System(system, "Ihr System", "Beschreibung")
-System_Ext(extern, "Externes System", "Beschreibung")
-
-Rel(benutzer, system, "Nutzt")
-Rel(system, extern, "Ruft auf")
-@enduml
-----
+// Diagramm: Architekturelemente und Beziehungen in einer vom Projekt gewählten Notation beschreiben.
 
 [options="header",cols="1,2,2"]
 |===
@@ -244,19 +211,7 @@ In der Analogie zum Hausbau bildet die Bausteinsicht den _Grundrissplan_.
 
 // Fuegen Sie hier ein Komponentendiagramm ein
 
-[plantuml, bausteine-e1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
-
-Container(web, "Webanwendung", "React", "Benutzeroberflaeche")
-Container(api, "API Server", "Node.js", "Geschaeftslogik")
-ContainerDb(db, "Datenbank", "PostgreSQL", "Datenspeicherung")
-
-Rel(web, api, "Ruft auf", "REST/JSON")
-Rel(api, db, "Liest/Schreibt", "SQL")
-@enduml
-----
+// Diagramm: Architekturelemente und Beziehungen in einer vom Projekt gewählten Notation beschreiben.
 
 === Enthaltene Bausteine
 
@@ -364,24 +319,7 @@ function getDeploymentViewTemplate(): string {
 
 *Inhalt*: Ueberblick ueber die Deployment-Infrastruktur.
 
-[plantuml, verteilung-e1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
-
-Deployment_Node(cloud, "Cloud Provider", "AWS/Azure/GCP") {
-    Deployment_Node(web_tier, "Web Tier") {
-        Container(web, "Web Server", "nginx", "Statische Dateien + Reverse Proxy")
-    }
-    Deployment_Node(app_tier, "Application Tier") {
-        Container(api, "API Server", "Node.js", "Geschaeftslogik")
-    }
-    Deployment_Node(data_tier, "Data Tier") {
-        ContainerDb(db, "Datenbank", "PostgreSQL", "Primaerspeicher")
-    }
-}
-@enduml
-----
+// Diagramm: Architekturelemente und Beziehungen in einer vom Projekt gewählten Notation beschreiben.
 
 === Begruendung
 
@@ -488,52 +426,14 @@ Siehe https://docs.arc42.org/section-8/[Querschnittliche Konzepte] in der arc42 
 function getArchitectureDecisionsTemplate(): string {
   return `= 9. Architekturentscheidungen
 
-*Inhalt*: Wichtige, teure, grosse oder riskante Architektur- oder Entwurfsentscheidungen inklusive der jeweiligen Begruendungen.
-Mit "Entscheidungen" meinen wir hier die Auswahl einer von mehreren Alternativen unter vorgegebenen Kriterien.
-
-== ADR-001: [Entscheidungstitel]
-
-=== Status
-
-[Vorgeschlagen | Akzeptiert | Veraltet | Ersetzt]
-
-=== Kontext
-
-[Beschreiben Sie das Problem, das diese Entscheidung motiviert]
-
-=== Entscheidung
-
-[Beschreiben Sie die getroffene Entscheidung]
-
-=== Konsequenzen
-
-*Positiv:*
-
-* [Vorteil 1]
-* [Vorteil 2]
-
-*Negativ:*
-
-* [Nachteil 1]
-* [Nachteil 2]
-
-=== Betrachtete Alternativen
+Überblick über wichtige Architekturentscheidungen und ihre Begründung. Auf separat gepflegte ADRs verweisen; Inhalt, Format und Lebenszyklus nicht verwalten.
 
 [options="header",cols="1,2,2"]
 |===
-|Alternative |Vorteile |Nachteile
-|[Option A] |[Vorteile] |[Nachteile]
-|[Option B] |[Vorteile] |[Nachteile]
+|Entscheidung |Architekturauswirkung / Begründung |Externer ADR
 |===
 
-'''
-
-== ADR-002: [Entscheidungstitel]
-
-// Verwenden Sie dasselbe Template fuer weitere Entscheidungen
-
-.Weiterfuehrende Informationen
-Siehe https://docs.arc42.org/section-9/[Architekturentscheidungen] in der arc42 Dokumentation.
+Bei Verfügbarkeit einen Link zum bestehenden ADR ergänzen.
 `;
 }
 

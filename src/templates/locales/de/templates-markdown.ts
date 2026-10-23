@@ -36,23 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 ## Aufgabenstellung
 
-**Zweck**: Beschreibt die wesentlichen Anforderungen und treibenden Kräfte, die bei der Umsetzung der Softwarearchitektur und Entwicklung des Systems berücksichtigt werden müssen.
-
-### Wesentliche Anforderungen
-
-<!-- Listen Sie die Top 3-5 funktionalen Anforderungen auf -->
-
-| ID | Anforderung | Priorität |
-|----|-------------|-----------|
-| ANF-1 | [Kurzbeschreibung] | Hoch |
-| ANF-2 | [Kurzbeschreibung] | Mittel |
-
-### Features
-
-<!-- Wesentliche Features des Systems -->
-
-- Feature 1: [Beschreibung]
-- Feature 2: [Beschreibung]
+Architekturrelevante Anforderungen kurz zusammenfassen und auf extern gepflegte Anforderungen verweisen. Anforderungen hier nicht erstellen oder verwalten.
 
 ## Qualitätsziele
 
@@ -620,73 +604,12 @@ function getConceptsTemplate(): string {
 function getArchitectureDecisionsTemplate(): string {
   return `# 9. Architekturentscheidungen
 
-**Zweck**: Dokumentiert wichtige, teure, kritische oder riskante Architekturentscheidungen einschließlich Begründung.
+Überblick über wichtige Architekturentscheidungen und ihre Begründung. Auf separat gepflegte ADRs verweisen; Inhalt, Format und Lebenszyklus nicht verwalten.
 
-## ADR-Format
+| Entscheidung | Architekturauswirkung / Begründung | Externer ADR |
+|---|---|---|
 
-Jede Entscheidung folgt dieser Struktur:
-- **Kontext**: Was ist das Problem, das wir angehen?
-- **Entscheidung**: Was wir beschlossen haben zu tun
-- **Konsequenzen**: Was dadurch einfacher oder schwieriger wird
-
-## Entscheidungsprotokoll
-
-### ADR-001: [Entscheidungstitel]
-
-**Datum**: [JJJJ-MM-TT]
-**Status**: [Vorgeschlagen | Akzeptiert | Veraltet | Abgelöst]
-**Entscheider**: [Namen]
-
-**Kontext**:
-
-[Beschreiben Sie die wirkenden Kräfte, technisch, politisch, sozial und projektspezifisch. Diese Kräfte stehen wahrscheinlich in Spannung zueinander und sollten als solche benannt werden.]
-
-**Entscheidung**:
-
-[Beschreiben Sie unsere Reaktion auf diese Kräfte. Hier treffen wir unsere Entscheidung.]
-
-**Konsequenzen**:
-
-Positiv:
-- [Vorteil 1]
-- [Vorteil 2]
-
-Negativ:
-- [Kompromiss 1]
-- [Kompromiss 2]
-
-Risiken:
-- [Risiko 1 und Mitigation]
-
-### ADR-002: [Weitere Entscheidung]
-
-[Ähnliche Struktur]
-
-## Entscheidungskategorien
-
-### Strukturelle Entscheidungen
-
-| Entscheidung | Begründung | Datum |
-|--------------|------------|-------|
-| [Microservices vs Monolith] | [Warum gewählt] | [Datum] |
-
-### Technologieentscheidungen
-
-| Komponente | Technologie | Betrachtete Alternative | Warum gewählt |
-|------------|-------------|------------------------|---------------|
-| [Backend] | [Node.js] | [Python, Java] | [Gründe] |
-
-### Prozessentscheidungen
-
-| Entscheidung | Auswirkung | Datum |
-|--------------|------------|-------|
-| [Agile Methodik] | [Wie es die Architektur beeinflusst] | [Datum] |
-
-## Veraltete Entscheidungen
-
-| Entscheidung | Datum veraltet | Grund | Abgelöst durch |
-|--------------|----------------|-------|----------------|
-| [Alte Entscheidung] | [Datum] | [Warum veraltet] | [ADR-XXX] |
+Bei Verfügbarkeit einen Link zum bestehenden ADR ergänzen.
 `;
 }
 

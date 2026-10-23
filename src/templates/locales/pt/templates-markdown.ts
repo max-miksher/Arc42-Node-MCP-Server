@@ -36,23 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 ## Visão Geral dos Requisitos
 
-**Propósito**: Descreve os requisitos essenciais e as forças motrizes que devem ser consideradas na implementação da arquitetura de software e no desenvolvimento do sistema.
-
-### Requisitos Essenciais
-
-<!-- Liste os 3-5 principais requisitos funcionais -->
-
-| ID | Requisito | Prioridade |
-|----|-----------|------------|
-| REQ-1 | [Breve descrição] | Alta |
-| REQ-2 | [Breve descrição] | Média |
-
-### Funcionalidades
-
-<!-- Funcionalidades essenciais do sistema -->
-
-- Funcionalidade 1: [Descrição]
-- Funcionalidade 2: [Descrição]
+Resumir os requisitos relevantes para a arquitetura e referenciar requisitos externos. Não criar nem gerir requisitos aqui.
 
 ## Objetivos de Qualidade
 
@@ -620,73 +604,12 @@ function getConceptsTemplate(): string {
 function getArchitectureDecisionsTemplate(): string {
   return `# 9. Decisões de Arquitetura
 
-**Propósito**: Documenta decisões arquiteturais importantes, custosas, críticas ou arriscadas, incluindo justificativas.
+Visão das decisões arquiteturais significativas e seus motivos. Referenciar ADRs separados sem gerir conteúdo, formato ou ciclo de vida.
 
-## Formato ADR
+| Decisão | Impacto arquitetural / motivo | ADR externo |
+|---|---|---|
 
-Cada decisão segue esta estrutura:
-- **Contexto**: Qual é o problema que estamos enfrentando?
-- **Decisão**: O que decidimos fazer
-- **Consequências**: O que se torna mais fácil ou mais difícil
-
-## Registro de Decisões
-
-### ADR-001: [Título da Decisão]
-
-**Data**: [AAAA-MM-DD]
-**Status**: [Proposta | Aceita | Obsoleta | Substituída]
-**Decisores**: [Nomes]
-
-**Contexto**:
-
-[Descreva as forças em jogo, técnicas, políticas, sociais e específicas do projeto. Essas forças provavelmente estão em tensão e devem ser identificadas como tal.]
-
-**Decisão**:
-
-[Descreva nossa resposta a essas forças. Aqui é onde tomamos nossa decisão.]
-
-**Consequências**:
-
-Positivas:
-- [Benefício 1]
-- [Benefício 2]
-
-Negativas:
-- [Trade-off 1]
-- [Trade-off 2]
-
-Riscos:
-- [Risco 1 e mitigação]
-
-### ADR-002: [Outra Decisão]
-
-[Estrutura similar]
-
-## Categorias de Decisões
-
-### Decisões Estruturais
-
-| Decisão | Justificativa | Data |
-|---------|---------------|------|
-| [Microsserviços vs Monolito] | [Por que foi escolhido] | [Data] |
-
-### Decisões Tecnológicas
-
-| Componente | Tecnologia | Alternativa Considerada | Por que Escolhida |
-|------------|------------|------------------------|-------------------|
-| [Backend] | [Node.js] | [Python, Java] | [Razões] |
-
-### Decisões de Processo
-
-| Decisão | Impacto | Data |
-|---------|---------|------|
-| [Metodologia ágil] | [Como afeta a arquitetura] | [Data] |
-
-## Decisões Obsoletas
-
-| Decisão | Data Obsoleta | Razão | Substituída por |
-|---------|---------------|-------|-----------------|
-| [Decisão antiga] | [Data] | [Por que obsoleta] | [ADR-XXX] |
+Adicionar um link para o ADR existente quando disponível.
 `;
 }
 
