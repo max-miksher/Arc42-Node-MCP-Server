@@ -1,4 +1,7 @@
 import { z } from 'zod';
+// Modified in the Dogma fork: opt-in product workspace; legacy defaults retained.
+import { initializeProduct } from '../product-workspace.js';
+import { ARC42_SECTIONS, type Arc42Section } from '../types.js';
 import { ToolContext, ToolResponse, resolveWorkspaceRoot, getErrorMessage } from '../types.js';
 import {
   ARC42_REFERENCE,
@@ -22,6 +25,10 @@ const languageValues = SUPPORTED_LANGUAGE_CODES as unknown as [string, ...string
 const formatValues = FORMAT_INPUT_VALUES as unknown as [string, ...string[]];
 
 export const arc42InitInputSchema = {
+  profile: z.enum(['upstream', 'product']).optional().describe('product creates a configurable Markdown docs tree; upstream keeps the original workspace'),
+  docsDir: z.string().optional().describe('Product profile: relative documentation root, default docs'),
+  scaffold: z.enum(['minimal', 'full']).optional().describe('Product profile: minimal creates index, requirement and Level 1; full creates all 12 section drafts'),
+  sections: z.record(z.enum(ARC42_SECTIONS as unknown as [Arc42Section, ...Arc42Section[]]), z.string()).optional().describe('Product profile: override section-to-Markdown-path mapping, relative to docsDir'),
   projectName: z.string().describe('Name of the project being documented'),
   force: z.boolean().optional().describe('Force re-initialization even if the workspace exists. WARNING: this overwrites ALL existing section files with fresh templates — existing content is lost. Confirm with the user first.'),
   targetFolder: z.string().optional().describe('Optional: Absolute path to the target folder where arc42-docs will be created. If not provided, uses the default workspace configured at server startup.'),
@@ -46,6 +53,10 @@ export async function arc42InitHandler(
   args: Record<string, unknown>,
   context: ToolContext
 ): Promise<ToolResponse> {
+  if (args.profile === 'product') {
+    try { return initializeProduct(args, context); }
+    catch (error) { return { success: false, message: getErrorMessage(error) }; }
+  }
   const projectNameArg = args.projectName;
   const force = (args.force as boolean) ?? false;
   const targetFolder = args.targetFolder as string | undefined;

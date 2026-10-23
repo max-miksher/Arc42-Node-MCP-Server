@@ -1,4 +1,6 @@
 import type { ZodRawShape } from 'zod';
+// Modified in the Dogma fork: additive product-profile tools.
+import { arc42DocumentHandler, arc42DocumentInputSchema, arc42DocumentDescription } from './arc42-document.js';
 import { ToolContext, ToolResponse, MCPToolResponse, toMCPResponse } from '../types.js';
 
 // Re-export tool handlers and schemas (Single Source of Truth pattern)
@@ -87,6 +89,7 @@ export interface ToolDefinition {
  * this registry, so adding a tool requires exactly one new entry here.
  */
 export const TOOL_REGISTRY: readonly ToolDefinition[] = [
+  { name: 'arc42-document', handler: arc42DocumentHandler, inputSchema: arc42DocumentInputSchema, description: arc42DocumentDescription },
   {
     name: 'arc42-workflow-guide',
     description: arc42WorkflowGuideDescription,

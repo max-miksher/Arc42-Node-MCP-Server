@@ -1,4 +1,6 @@
 import { z } from 'zod';
+// Modified in the Dogma fork: product sections require a version precondition.
+import { loadProduct, productSection, writeDocument, readDocument } from '../product-workspace.js';
 import { ToolContext, ToolResponse, Arc42Section, ARC42_SECTIONS, SECTION_METADATA, resolveWorkspaceRoot, getErrorMessage, countWords } from '../types.js';
 import {
   type OutputFormatCode,
@@ -14,6 +16,7 @@ import { parse as parseYaml } from 'yaml';
 const sectionValues = ARC42_SECTIONS as unknown as [Arc42Section, ...Arc42Section[]];
 
 export const updateSectionInputSchema = {
+  expectedHash: z.string().regex(/^[a-f0-9]{64}$/).optional().describe('Required in product profile: SHA-256 from get-section. Prefer arc42-document edit for a targeted change.'),
   section: z.enum(sectionValues).describe('The section to update (e.g., "01_introduction_and_goals")'),
   content: z.string().describe('The content to write to the section, in the workspace\'s configured format (asciidoc or markdown — check with arc42-status)'),
   mode: z.enum(['replace', 'append']).optional().default('replace').describe('Write mode: "replace" OVERWRITES the entire section file; "append" adds the content after the existing content. Use "append" when adding ADRs (section 09) or other incremental entries so existing content is preserved. Defaults to "replace".'),
@@ -80,6 +83,19 @@ export async function updateSectionHandler(
   args: Record<string, unknown>,
   context: ToolContext
 ): Promise<ToolResponse> {
+  try {
+    const workspace = loadProduct(context, args.targetFolder);
+    if (workspace) {
+      if (typeof args.expectedHash !== 'string') throw new Error('Product profile requires expectedHash from get-section. Prefer arc42-document edit.');
+      if (typeof args.content !== 'string' || !args.content) throw new Error('content is required');
+      const current = productSection(workspace, args.section);
+      if (args.mode && !['append', 'replace'].includes(String(args.mode))) throw new Error('Invalid write mode');
+      const content = args.mode === 'append' ? current.content + '\n\n' + args.content : args.content;
+      const path = workspace.config.sections[args.section as Arc42Section];
+      writeDocument(workspace, path, content, args.expectedHash);
+      return { success: true, message: 'Product section written', data: readDocument(workspace, path) };
+    }
+  } catch (error) { return { success: false, message: getErrorMessage(error) }; }
   const section = args.section as string | undefined;
   const content = args.content as string | undefined;
   const mode = (args.mode as string) || 'replace';

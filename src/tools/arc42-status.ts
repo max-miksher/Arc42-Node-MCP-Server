@@ -1,4 +1,6 @@
 import { z } from 'zod';
+// Modified in the Dogma fork: product status reports coverage without word-count completeness.
+import { loadProduct, productStatus } from '../product-workspace.js';
 import { ToolContext, ToolResponse, ARC42_SECTIONS, SECTION_METADATA, resolveWorkspaceRoot, getErrorMessage, countWords } from '../types.js';
 import {
   ARC42_REFERENCE,
@@ -77,6 +79,10 @@ export async function arc42StatusHandler(
   args: Record<string, unknown>,
   context: ToolContext
 ): Promise<ToolResponse> {
+  try {
+    const workspace = loadProduct(context, args.targetFolder);
+    if (workspace) return productStatus(workspace);
+  } catch (error) { return { success: false, message: getErrorMessage(error) }; }
   const targetFolder = args.targetFolder as string | undefined;
 
   // Resolve workspace root - use targetFolder if provided, otherwise use context default

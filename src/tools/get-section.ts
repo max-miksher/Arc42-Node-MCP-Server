@@ -1,4 +1,6 @@
 import { z } from 'zod';
+// Modified in the Dogma fork: resolve configured multi-file section paths.
+import { loadProduct, productSection } from '../product-workspace.js';
 import { ToolContext, ToolResponse, Arc42Section, ARC42_SECTIONS, SECTION_METADATA, resolveWorkspaceRoot, getErrorMessage, countWords } from '../types.js';
 import {
   templateProvider,
@@ -52,6 +54,13 @@ export async function getSectionHandler(
   args: Record<string, unknown>,
   context: ToolContext
 ): Promise<ToolResponse> {
+  try {
+    const workspace = loadProduct(context, args.targetFolder);
+    if (workspace) {
+      const document = productSection(workspace, args.section);
+      return { success: true, message: 'Product section read', data: { ...document, section: args.section, format: 'markdown', language: workspace.config.language, metadata: { ...document.metadata, path: document.path } } };
+    }
+  } catch (error) { return { success: false, message: getErrorMessage(error) }; }
   const section = args.section as string | undefined;
   const targetFolder = args.targetFolder as string | undefined;
 

@@ -141,17 +141,18 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
   });
 
   describe('tools/list schema contract', () => {
-    it('should expose exactly the 6 documented tools', async () => {
+    it('should preserve the 6 upstream tools and expose additive product tools', async () => {
       const tools = await client.listTools();
       const names = tools.map(t => t.name).sort();
-      expect(names).toEqual([
+      expect(names).toEqual(expect.arrayContaining([
         'arc42-init',
         'arc42-status',
         'arc42-workflow-guide',
         'generate-template',
         'get-section',
         'update-section'
-      ]);
+      ]));
+      expect(names).toContain('arc42-document');
     });
 
     it('should accept format aliases md/adoc in every format-bearing tool', async () => {
