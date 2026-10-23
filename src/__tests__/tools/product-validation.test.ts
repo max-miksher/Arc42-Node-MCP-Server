@@ -110,6 +110,16 @@ describe('product validation and gradual migration', () => {
     expect(limited.data.truncated).toBe(true);
   });
 
+  it('hashes original legacy bytes without collapsing different non-UTF8 sources', async () => {
+    mkdirSync(join(context.projectPath, 'encoded'));
+    writeFileSync(join(context.projectPath, 'encoded/one.txt'), Buffer.from([0xff]));
+    writeFileSync(join(context.projectPath, 'encoded/two.txt'), Buffer.from([0xfe]));
+    const result = await call('arc42-inventory', { roots: ['encoded'] });
+    expect(result.data.duplicates).toHaveLength(0);
+    expect(result.data.files.every((file: any) => file.bytes === 1)).toBe(true);
+    expect(result.data.files.every((file: any) => file.encoding === 'unknown')).toBe(true);
+  });
+
   it('plans only explicit sources in the scope of an actual requirement without copying anything', async () => {
     mkdirSync(join(context.projectPath, 'old'));
     writeFileSync(join(context.projectPath, 'old/ARCH.md'), '# Architecture\n\nOriginal');

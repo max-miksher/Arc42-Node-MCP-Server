@@ -1,6 +1,7 @@
 /** Dogma fork: legacy inventory does not alter or classify sources as normative. */
 import { z } from 'zod';
 import { readFileSync } from 'node:fs';
+import { isUtf8 } from 'node:buffer';
 import { relative } from 'node:path';
 import { projectRoot, loadProduct, safePath, sha256, parseDocument } from '../product-workspace.js';
 import { scanDocuments } from '../product-validation.js';
@@ -17,15 +18,20 @@ export async function arc42InventoryHandler(args: Record<string, unknown>, conte
     const scan = scanDocuments(root, input.roots ?? ['.'], scanLimits(input));
     const hashes = new Map<string, string[]>();
     const files = scan.paths.map(path => {
-      const content = readFileSync(safePath(root, path), 'utf8');
-      const hash = sha256(content);
+      const original = readFileSync(safePath(root, path));
+      const content = original.toString('utf8');
+      const encoding = isUtf8(original) ? 'utf8' : 'unknown';
+      const hash = sha256(original);
       hashes.set(hash, [...(hashes.get(hash) ?? []), path]);
       let metadata: Record<string, unknown> | null = null;
       let metadataError: string | null = null;
-      try { metadata = parseDocument(content).metadata; } catch (error) { metadataError = String(error); }
+      try {
+        if (encoding !== 'utf8') throw new Error('Source is not UTF-8; explicit encoding review is required before migration');
+        metadata = parseDocument(content).metadata;
+      } catch (error) { metadataError = String(error); }
       const candidateType = /\bADR[- ]\d+|decision outcome/i.test(content) ? 'adr' : /architecture|архитектур|building block/i.test(content) ? 'architecture' : 'note';
       const docsPrefix = product ? relative(root, product.root).split('\\').join('/') + '/' : '';
-      return { path, sha256: hash, bytes: Buffer.byteLength(content), metadata, metadataError, canonicalCandidate: !!docsPrefix && path.startsWith(docsPrefix) && !!metadata, suggestedType: candidateType, requiresReview: true };
+      return { path, sha256: hash, bytes: original.length, encoding, metadata, metadataError, canonicalCandidate: !!docsPrefix && path.startsWith(docsPrefix) && !!metadata, suggestedType: candidateType, requiresReview: true };
     });
     return { success: true, message: 'Read-only inventory; suggestions require review, no documents migrated.', data: { files, duplicates: [...hashes.entries()].filter(([, paths]) => paths.length > 1).map(([hash, paths]) => ({ sha256: hash, paths })), warnings: scan.warnings, truncated: scan.truncated, limits: scan.limits } };
   } catch (error) { return { success: false, message: getErrorMessage(error) }; }
