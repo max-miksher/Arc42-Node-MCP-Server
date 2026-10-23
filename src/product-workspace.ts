@@ -226,7 +226,7 @@ export function initializeProduct(args: Record<string, unknown>, context: ToolCo
     documents.set(config.sections[section], markdown(title, 'architecture', body));
   }
   const links = [...documents.keys()].map(path => `- [${path}](${encodeURI(path)})`).join('\n');
-  documents.set('README.md', markdown(config.projectName + ' — документация', 'index', `# ${config.projectName}\n\n${links}\n\n[arc42](https://arc42.org/) — Gernot Starke, Peter Hruschka; шаблоны CC BY-SA 4.0. Локальная раскладка и метаданные изменены.\n\nЧерновики требуют проверки; наличие файлов не доказывает полноту или истинность архитектуры.`));
+  documents.set('README.md', markdown(config.projectName + ' — документация', 'index', `# ${config.projectName}\n\n${links}\n\n[arc42](https://arc42.org/) — Gernot Starke, Peter Hruschka; шаблоны [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Локальная раскладка и метаданные изменены.\n\nЧерновики требуют проверки; наличие файлов не доказывает полноту или истинность архитектуры.`));
   for (const path of documents.keys()) safePath(root, path);
   mkdirSync(projectPath, { recursive: true });
   return withProjectLock(projectPath, () => {

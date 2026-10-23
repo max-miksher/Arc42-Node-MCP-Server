@@ -44,3 +44,16 @@ If you redistribute this software or create derivative works:
    - Link to the original arc42 project (https://arc42.org/)
    - Indication of any modifications made
    - Distribution under the same CC BY-SA 4.0 license
+
+================================================================================
+Dogma Fork Modifications
+================================================================================
+Modified by Bondar Maksim, 2026-10-23.
+Fork: https://github.com/max-miksher/Arc42-Node-MCP-Server
+Adds configurable Markdown workspaces, YAML metadata, versioned exact edits,
+document/relationship validation and read-only legacy migration planning.
+Existing MCP handlers, registry, protocol tests, test config, CI, package metadata,
+README and arc42-docs Skill/references have been extended. Original notices and
+licenses are retained. Adapted arc42 scaffolds remain CC BY-SA 4.0; software
+changes are provided under Apache-2.0. The local normative profile is linked,
+not redistributed as an authoritative copy.
