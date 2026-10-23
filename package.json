@@ -31,7 +31,8 @@
     "submodule:init": "git submodule update --init --recursive",
     "submodule:update": "git submodule update --remote vendor/arc42-template",
     "show:arc42-version": "tsx scripts/show-arc42-version.ts",
-    "update:arc42": "npm run submodule:update && npm run show:arc42-version"
+    "update:arc42": "npm run submodule:update && npm run show:arc42-version",
+    "pretest:coverage": "npm run build"
   },
   "keywords": [
     "arc42",
