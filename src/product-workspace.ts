@@ -136,18 +136,22 @@ export function parseDocument(content: string): { metadata: z.infer<typeof metad
   return { metadata: metadataSchema.parse(parse(match[1], { maxAliasCount: 20 })), body: content.slice(match[0].length) };
 }
 export function readDocument(workspace: ProductWorkspace, path: string) {
-  const raw = readRawDocument(workspace, path);
-  return { ...raw, metadata: parseDocument(raw.content).metadata };
+  const raw = readRawDocument(workspace, path, true);
+  return { ...raw, metadata: raw.metadata! };
 }
 
 /** Raw reads allow repairing legacy/broken metadata through the same CAS path. */
-export function readRawDocument(workspace: ProductWorkspace, path: string) {
+export function readRawDocument(workspace: ProductWorkspace, path: string, throwOnMetadataError = false) {
   const absolute = safePath(workspace.root, path);
   if (!path.endsWith('.md')) throw new Error('Expected a .md document');
   const content = readFileSync(absolute, 'utf8');
   let metadata: z.infer<typeof metadataSchema> | null = null;
   let metadataError: string | null = null;
-  try { metadata = parseDocument(content).metadata; } catch (error) { metadataError = String(error); }
+  try { metadata = parseDocument(content).metadata; }
+  catch (error) {
+    if (throwOnMetadataError) throw error;
+    metadataError = String(error);
+  }
   return { path: absolute, relativePath: path, content, sha256: sha256(content), metadata, metadataError, wordCount: countWords(content) };
 }
 

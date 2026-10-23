@@ -75,7 +75,8 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
   try { document = parseDocument(content); }
   catch (error) { add('metadata', String(error)); return issues; }
   const { metadata, body } = document;
-  if (!body.trim() || !tokens(body).some(token => token.type === 'heading')) add('content', 'Document requires a heading and meaningful content');
+  const sequence = tokens(body);
+  if (!body.trim() || !sequence.some(token => token.type === 'heading')) add('content', 'Document requires a heading and meaningful content');
   if (metadata.status === 'draft') add('draft', 'Draft requires content review; presence is not completeness', 'warning');
   if (metadata.updated > new Date().toISOString().slice(0, 10)) add('metadata', 'updated is in the future');
 
@@ -131,7 +132,6 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
     if (metadata.type !== 'adr' || !path.startsWith(adrPrefix) || !/^ADR-\d{4,}-[^/]+\.md$/.test(path.split('/').at(-1)!)) add('madr', 'Separate ADR requires ADR-xxxx-slug.md under section 9 and type: adr');
     const decision = z.object({ date: dateSchema, decision_status: z.enum(['proposed', 'accepted', 'rejected', 'deprecated', 'superseded']), 'decision-makers': z.array(z.string().min(1)).min(1).optional() }).safeParse(metadata);
     if (!decision.success) add('madr', 'ADR adapter requires date and decision_status; document status remains draft/active/deprecated/superseded');
-    const sequence = tokens(body);
     const headings = sequence.flatMap(token => token.type === 'heading' ? [token.text] : []);
     for (const heading of ['Context and Problem Statement', 'Considered Options', 'Decision Outcome']) {
       if (!headings.includes(heading)) add('madr', 'Missing MADR minimal heading: ' + heading);
@@ -198,7 +198,7 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
       }
     } catch (error) { add('link', `${href}: ${String(error)}`); }
   }
-  marked.walkTokens(tokens(body), (token: Token) => {
+  marked.walkTokens(sequence, (token: Token) => {
     if (token.type === 'link' || token.type === 'image') checkLink(token.href);
     else if (token.type === 'html') {
       const html = token.raw.replace(/<!--[\s\S]*?-->/g, '');
