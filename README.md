@@ -7,10 +7,13 @@ updated: 2026-10-23
 
 # Форк с продуктовым профилем
 
-<!-- Modified by Bondar Maksim: product profile, safe edits, validation and legacy planning. -->
-Эта ветка добавляет настраиваемую документацию в `docs/`, отдельные MADR,
-вложенные Building Blocks, runtime-сценарии и проверку метаданных/ссылок.
-Новые инструменты дополняют шесть исходных MCP tools; прежний режим и форматы сохраняются.
+<!-- Modified by Bondar Maksim: arc42 workspaces, safe edits, validation and read-only legacy recovery. -->
+Эта ветка добавляет полный каркас arc42, настраиваемую структуру в `docs/`,
+вложенные Building Blocks, runtime-сценарии, точечные правки и проверку метаданных/ссылок.
+ADR, C4, Diátaxis, требования и планы ведутся отдельно; разделы 1 и 9 содержат ссылки.
+Legacy-источники читаются выборочно для восстановления архитектурных сведений.
+Новые `arc42-document`, `arc42-validate`, `arc42-inventory`, `arc42-recover`
+дополняют шесть исходных MCP tools; прежний режим и форматы сохраняются.
 
 Установка форка: [инструкция](docs/how-to/install.md).
 Контракт и ограничения: [product profile](docs/reference/product-profile.md).
@@ -486,7 +489,7 @@ Update content in a specific arc42 section.
 update-section {
   section: "01_introduction_and_goals",
   content: "= Your AsciiDoc or Markdown content here",
-  mode?: "replace" | "append",       // Optional: write mode (default: replace); use "append" for ADRs
+  mode?: "replace" | "append",       // Optional: write mode (default: replace); use "append" for arc42 overview entries
   targetFolder?: "/path/to/project"  // Optional: specify target directory
 }
 // Note: Automatically detects format from existing file extension
@@ -680,7 +683,7 @@ AI runs: arc42-status
 You: "Document why we chose PostgreSQL over MongoDB"
 
 AI runs: generate-template { section: "09_architecture_decisions" }
-AI creates ADR with context, decision, and consequences
+AI summarizes architectural impact and rationale, linking to an independently maintained ADR
 AI runs: update-section { 
   section: "09_architecture_decisions",
   content: "...",
@@ -745,14 +748,14 @@ The skill is a structured knowledge package located at `.claude/skills/arc42-doc
 ├── SKILL.md              # Skill definition with workflows, tool reference, and behavioral guidelines
 └── references/
     ├── setup.md          # MCP server installation and configuration for all clients
-    └── examples.md       # Practical usage examples (8 scenarios)
+    └── examples.md       # Practical arc42 usage examples
 ```
 
 When present in a project, Claude automatically loads the skill and understands:
 
 - The correct **workflow order** for arc42 documentation (guide → init → status → template → write → review)
-- **All 6 MCP tools**, their parameters, and expected responses
-- **Best practices** such as always generating a template before writing, using append mode for ADRs, and asking clarifying questions before assuming project details
+- **All 10 MCP tools**, their parameters, and expected responses
+- **Best practices** such as always generating a template before writing, using safe edits for arc42 overviews and external links, and asking clarifying questions before assuming project details
 - The **recommended documentation order** (Section 1 → 3 → 4 → 5 → 9, then fill the remaining sections)
 
 ### Installing the Skill in Other Projects
@@ -788,7 +791,7 @@ Claude activates the arc42 skill when it detects any of the following in convers
 | Architecture documentation keywords | "create architecture documentation", "document the architecture", "update architecture docs" |
 | Arc42 references                    | "arc42", "initialize arc42", "arc42 template"                                                |
 | Section-specific requests           | "document the deployment view", "add quality requirements", "describe the building blocks"   |
-| ADR mentions                        | "add an Architecture Decision Record", "document why we chose PostgreSQL"                    |
+| Decisions overview                  | "link the existing ADR", "summarize the storage decision in section 9"                       |
 | Any of the 12 arc42 sections        | Introduction and Goals, Constraints, Context and Scope, Solution Strategy, etc.              |
 
 ### Benefits for Your Projects
@@ -798,7 +801,7 @@ Claude activates the arc42 skill when it detects any of the following in convers
 | **Workflow knowledge** | Must manually prompt Claude to follow arc42 order | Claude automatically follows guide → init → template → write workflow             |
 | **Tool usage**         | May call tools incorrectly or skip steps          | Calls the right tools with correct parameters in the right sequence               |
 | **Content quality**    | Generic documentation output                      | Generates templates first, asks clarifying questions, documents WHY not just WHAT |
-| **ADR handling**       | Risk of overwriting existing decisions            | Always reads existing ADRs first and uses append mode                             |
+| **Decision overview**  | Duplicate ownership of external decisions         | Summarizes architectural impact and links to independently maintained ADRs        |
 | **Format awareness**   | May mix AsciiDoc and Markdown syntax              | Checks `arc42-status` for configured format and writes consistently               |
 | **Multi-language**     | Defaults to English only                          | Respects configured language across all tool calls                                |
 | **Team consistency**   | Each developer gets different results             | Shared skill in version control ensures consistent documentation quality          |

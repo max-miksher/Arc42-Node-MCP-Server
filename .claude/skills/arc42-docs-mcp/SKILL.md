@@ -1,51 +1,71 @@
 ---
 name: arc42-docs
-description: Use when creating or maintaining arc42 architecture documentation through Arc42 MCP Server, including building blocks, runtime scenarios, separate MADR, metadata validation and requirement-scoped legacy migration.
+description: Use when creating, editing, checking or incrementally recovering arc42 architecture documentation through Arc42 MCP Server. Covers sections, nested building blocks, runtime scenarios, safe patches and links to externally managed artifacts.
 metadata:
   modified-by: Bondar Maksim
   modified: 2026-10-23
 ---
 
-# Архитектурная документация через MCP
+# Архитектурная документация arc42 через MCP
 
-Сначала прочитай текущее требование и релевантные активные документы. Не подменяй фактическое состояние шаблоном. При конфликте requirement, кода и активного документа вынеси конфликт владельцу.
+Веди только arc42. ADR/MADR, C4, Diátaxis, требования и планы имеют отдельных
+владельцев и инструменты. Здесь не создавай их, не редактируй и не проверяй их
+схемы или жизненный цикл. Раздел 1 содержит краткий архитектурный контекст и ссылки
+на внешние требования. Раздел 9 — обзор решений, их влияние, краткое обоснование
+и ссылки на отдельные ADR. Не дублируй внешний документ в arc42.
 
-## Выбор режима
+## Определить workspace
 
-Вызови `arc42-status`. `data.profile: product` означает настраиваемое Markdown-дерево; пути разделов возвращают `get-section` и status. Старый workspace находится в `arc42-docs/` и сохраняет Markdown/AsciiDoc, 11 языков и шесть upstream tools.
+Вызови `arc42-status`. При `data.profile: product` получи реальные пути через status
+или `get-section`; не предполагай стандартную раскладку. `.arc42.yaml` — источник
+карты разделов. Upstream workspace сохраняет arc42-docs, 11 языков и два формата;
+новые инструменты редактирования и валидации предназначены для product Markdown.
+Если конфигурации нет, но документация уже есть, начни с `arc42-inventory`.
+Не запускай init поверх существующих файлов и не используй force для восстановления.
 
-Если status не видит workspace, прочитай `arc42-inventory` перед инициализацией. Отсутствие конфигурации не означает отсутствие документации. Не запускай init поверх существующих материалов.
+Для нового проекта: `arc42-init {projectName, profile:"product", language:"RU"}`.
+Создаются все 12 разделов и индекс с YAML. Это черновики для проверки по источникам,
+а не готовая архитектура. При необходимости сразу передай docsDir и sections.
+Никакие существующие материалы автоматически не переносятся.
 
-Новый проект: `arc42-init {projectName, profile:"product", language:"RU", format:"markdown"}`. По умолчанию создаются индекс, requirement и Level 1. `docsDir` и `sections` задают физическую раскладку; `scaffold:"full"` явно создаёт 12 черновиков. Пустые каталоги не создаются. Все вызовы могут указывать абсолютный `targetFolder` корня проекта.
+## Редактировать
 
-## Продуктовый профиль
+Сначала прочитай раздел через `get-section` или подраздел через
+`arc42-document {action:"read", path}`. Для существующего файла используй
+`action:"edit"`, свежий expectedHash и ровно одно точное oldText; newText заменяет
+только этот фрагмент. При конфликте перечитай файл и пересмотри правку.
+`create` принимает полный Markdown и никогда не перезаписывает существующий файл.
+`update-section` сохраняет replace/append; в product требует hash и сохранения YAML.
 
-Критерии углубления и локальные нормативные правила: [профиль владельца, 2026-10-12](https://drive.google.com/file/d/18g_j2ehMx76VEU0RKGZ_lTD90Am3EyVA/view). Если источник недоступен и смысл триггера неизвестен, не углубляй блок по одному номеру; запроси релевантное условие у владельца.
+Каждая управляемая страница имеет title, type: architecture, status и updated
+(YYYY-MM-DD); корневой индекс имеет type: index. Обычный подраздел объявляет section
+(ID раздела arc42) и находится в каталоге настроенного раздела или ниже.
+Управление произвольными Markdown вне разделов не предоставляется.
 
-`arc42-document` адресует `.md` относительно настроенного docsDir:
+Building Blocks: `building-blocks/<имя>/README.md` внутри каталога раздела 5,
+`kind: building-block`, `parent` — docs-relative путь непосредственного родителя;
+для первого уровня это настроенный файл раздела 5. Вложение повторяется по нужной
+глубине, без обязательных локальных триггеров. Описывай ответственности, интерфейсы
+и архитектурно значимые связи; не выдумывай сведения по одному имени класса.
 
-1. `action:"read", path` возвращает content и sha256.
-2. `action:"edit", path, expectedHash, oldText, newText` меняет ровно одно точное совпадение. При конфликте прочитай документ заново, сверь изменение с текущим текстом; не повторяй старую запись.
-3. `action:"create", path, content` создаёт новый файл без перезаписи. Содержимое начинается с YAML frontmatter: title, type, status, updated (действительная дата YYYY-MM-DD).
+Runtime: `scenarios/<имя>.md` внутри каталога раздела 6, `kind: runtime-scenario`,
+`blocks` — docs-relative пути к существующим Building Blocks. Опиши значимое
+взаимодействие, исключения и результат. Обзор всей системы не заменяет участников.
 
-`get-section` читает корневой документ раздела, а не склеивает дочерние файлы. `update-section` в product-режиме требует expectedHash; для точечной правки используй document edit. Метаданные и неизвестные поля сохраняй. Статусы документа: draft, active, deprecated, superseded. Для superseded нужна docs-relative ссылка superseded_by. Типы и поля связей описаны в [примерах](references/examples.md).
+## Проверять и восстанавливать сведения
 
-Building Blocks: Level 1 обязателен. Дочерние документы — `building-blocks/<имя>/README.md` внутри каталога родителя, `type: architecture`, `kind: building-block`, `parent` с docs-relative путём. Для уровня внутренних частей нужны `decomposition.trigger` (1..5 из нормативного профиля) и `decomposition.evidence` с путями requirement/ADR/scenario/risk/quality requirement. Номер триггера не доказывает его истинность: прочитай evidence и проверь условие. Не создавай полный arc42 для каждого блока.
+После правки вызови `arc42-validate`. Исправь errors; truncated означает неполную
+проверку. Warning draft требует содержательного ревью. Сервер проверяет структуру,
+метаданные arc42, локальные ссылки/якоря и явные связи, но не доказывает истинность
+архитектуры и не проверяет внешние URL. Связанные ADR и требования проверяются только
+как цели ссылок, без проверки их формата.
 
-Runtime: отдельные `.md` в `scenarios/` раздела 6, `kind: runtime-scenario`, `blocks` — docs-relative пути существующих Building Blocks. Описывай архитектурно значимые взаимодействия, включая ошибки.
+Для legacy выбери источник из `arc42-inventory`. Вызови
+`arc42-recover {source, section}`. Проверь excerpt, sourceHash, truncated и nextOffset;
+прочитай нужные части, сопоставь факты с текущим кодом, обозначь неопределённости.
+Затем внеси проверенные архитектурные сведения отдельным точечным патчем arc42.
+Не переноси весь источник, не переписывай его, не меняй его статус и не создавай
+план миграции. Итог проверяй относительно текущего кода и внешних источников.
 
-ADR: отдельный `ADR-xxxx-slug.md` в каталоге раздела 9, `type: adr`. MADR minimal: Context and Problem Statement, Considered Options, Decision Outcome. Локальный адаптер отделяет status документа от decision_status решения; точные поля и пример — в references/examples.md. Добавь навигационную ссылку из секции 9 безопасной правкой. Не копируй ADR в общий файл.
-
-После записи вызови `arc42-validate`. Ошибки и truncated требуют устранения или явного отчёта; предупреждение draft не равно готовой архитектуре. Валидатор проверяет синтаксис и явные связи. Истинность относительно кода, C4-нотацию, содержательную согласованность и актуальность затронутых active-документов проверяй отдельно.
-
-## Legacy
-
-`arc42-inventory {roots:["old-docs"]}` читает исходники, показывает metadata errors, hashes, дубли и ограничения. Это подсказки для классификации, не новый источник истины.
-
-`arc42-migration-plan {requirement, items:[{source,target,reason}]}` готовит план без записи. requirement и target относительны docsDir; source — корню репозитория. Выбирай только документы, нужные текущему требованию. План не разрешает автоматически переносить, удалять, переписывать или менять статус исходника. При замене явно свяжи старый документ с новым; тот же объект обновляй на месте.
-
-## Upstream workspace
-
-Сохраняются arc42-workflow-guide, arc42-init, arc42-status, generate-template, get-section, update-section. Язык и формат берутся из config.yaml. Read → edit review → write; replace перезаписывает весь раздел, append добавляет текст. Старый режим не получает гарантий product-профиля. `force:true` уничтожает прежнее содержимое — только при прямом задании пользователя начать заново. Не предлагай такую операцию для миграции.
-
-Установка и подключение: [setup](references/setup.md). Сценарии и метаданные: [examples](references/examples.md). Схемы в tools/list являются источником истины для аргументов.
+Установка: [references/setup.md](references/setup.md).
+Примеры: [references/examples.md](references/examples.md).

@@ -35,7 +35,7 @@ npm test -- --run
 
 На Windows используй абсолютные Windows-пути с экранированием `\\`. Если сервер запускается в WSL, Node и оба пути должны относиться к одной WSL-среде. MCP-клиент должен уметь запускать эту среду. Значение `targetFolder` переопределяет проект для одного вызова и всегда должно быть абсолютным. Каталоги через symlink отклоняются; укажи реальный путь.
 
-В `tools/list` должны быть 10 инструментов: шесть upstream и arc42-document, arc42-validate, arc42-inventory, arc42-migration-plan. `stdout` занят MCP JSON-RPC; логи идут в stderr. Проверка stdio выполняется автоматически тестом `mcp-protocol-contract.test.ts` после сборки.
+В `tools/list` должны быть 10 инструментов: шесть upstream и arc42-document, arc42-validate, arc42-inventory, arc42-recover. `stdout` занят MCP JSON-RPC; логи идут в stderr. Проверка stdio выполняется автоматически тестом `mcp-protocol-contract.test.ts` после сборки.
 
 # Skill
 
@@ -48,8 +48,9 @@ npm test -- --run
 1. `arc42-status` — определить существующий режим.
 2. `arc42-inventory` — проверить legacy, если документация уже существует без поддержанной конфигурации.
 3. Только для нового проекта: `arc42-init {projectName:"Example", profile:"product", language:"RU", format:"markdown"}`.
-4. Прочитать возвращённый requirement и Level 1. Создавать только документы, нужные текущей работе.
-5. `arc42-validate` — проверить структуру; затем проверить содержание относительно требования и кода.
+4. Проверить черновики всех 12 разделов. Уточнять архитектуру по коду и источникам, добавляя только нужные подразделы.
+5. `arc42-validate` — проверить структуру; затем сверить содержание с кодом и архитектурными источниками.
+6. Для legacy: `arc42-recover {source:"old/architecture.md", section:"03_context_and_scope"}` — прочитать выбранный источник, затем внести проверенные сведения отдельной правкой arc42. Исходники остаются без изменений.
 
 Профиль: [контракт](../reference/product-profile.md). Конкретные документы и MCP-вызовы: [примеры Skill](../../.claude/skills/arc42-docs-mcp/references/examples.md).
 

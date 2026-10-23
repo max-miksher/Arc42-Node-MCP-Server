@@ -17,7 +17,10 @@
     ".claude/skills/arc42-docs-mcp/**/*",
     "docs/how-to/**/*",
     "docs/reference/**/*",
-    "docs/reports/**/*"
+    "docs/reports/**/*",
+    "CONTRIBUTING.md",
+    "docs/mcp-inspector-testing.md",
+    "docs/mcp-inspector-screenshot.png"
   ],
   "scripts": {
     "build": "npm run clean && tsc && chmod +x dist/index.js",
