@@ -1,4 +1,4 @@
-/** Dogma fork: opt-in Markdown profile; upstream workspaces retain their contract. */
+/** Fork extension: opt-in Markdown profile; upstream workspaces retain their contract. */
 import { createHash, randomUUID } from 'node:crypto';
 import {
   closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync,

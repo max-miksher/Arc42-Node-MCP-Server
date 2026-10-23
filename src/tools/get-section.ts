@@ -1,5 +1,5 @@
 import { z } from 'zod';
-// Modified in the Dogma fork: resolve configured multi-file section paths.
+// Modified in this fork: resolve configured multi-file section paths.
 import { loadProduct, productSection } from '../product-workspace.js';
 import { ToolContext, ToolResponse, Arc42Section, ARC42_SECTIONS, SECTION_METADATA, resolveWorkspaceRoot, getErrorMessage, countWords } from '../types.js';
 import {

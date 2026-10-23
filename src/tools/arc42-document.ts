@@ -1,4 +1,4 @@
-/** Dogma fork: document operations with metadata and compare-and-swap. */
+/** Fork extension: document operations with metadata and compare-and-swap. */
 import { z } from 'zod';
 import { getErrorMessage, type ToolContext, type ToolResponse } from '../types.js';
 import { requireProduct, readDocument, readRawDocument, writeDocument } from '../product-workspace.js';

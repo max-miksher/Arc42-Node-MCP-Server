@@ -1,5 +1,5 @@
 import { z } from 'zod';
-// Modified in the Dogma fork: product sections require a version precondition.
+// Modified in this fork: product sections require a version precondition.
 import { loadProduct, productSection, writeDocument, readDocument } from '../product-workspace.js';
 import { ToolContext, ToolResponse, Arc42Section, ARC42_SECTIONS, SECTION_METADATA, resolveWorkspaceRoot, getErrorMessage, countWords } from '../types.js';
 import {

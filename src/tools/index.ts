@@ -1,5 +1,5 @@
 import type { ZodRawShape } from 'zod';
-// Modified in the Dogma fork: additive product-profile tools.
+// Modified in this fork: additive product-profile tools.
 import { arc42DocumentHandler, arc42DocumentInputSchema, arc42DocumentDescription } from './arc42-document.js';
 import { arc42ValidateHandler, arc42ValidateInputSchema, arc42ValidateDescription } from './arc42-validate.js';
 import { arc42InventoryHandler, arc42InventoryInputSchema, arc42InventoryDescription } from './arc42-inventory.js';

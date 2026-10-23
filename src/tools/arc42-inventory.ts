@@ -1,4 +1,4 @@
-/** Dogma fork: legacy inventory does not alter or classify sources as normative. */
+/** Fork extension: legacy inventory does not alter or classify sources as normative. */
 import { z } from 'zod';
 import { readFileSync } from 'node:fs';
 import { isUtf8 } from 'node:buffer';

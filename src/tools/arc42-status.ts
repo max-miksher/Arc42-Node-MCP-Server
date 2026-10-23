@@ -1,5 +1,5 @@
 import { z } from 'zod';
-// Modified in the Dogma fork: product status reports coverage without word-count completeness.
+// Modified in this fork: product status reports coverage without word-count completeness.
 import { loadProduct, productStatus } from '../product-workspace.js';
 import { ToolContext, ToolResponse, ARC42_SECTIONS, SECTION_METADATA, resolveWorkspaceRoot, getErrorMessage, countWords } from '../types.js';
 import {

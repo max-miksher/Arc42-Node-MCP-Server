@@ -1,4 +1,4 @@
-/** Dogma fork: planning only; migrating remains an explicit reviewed change. */
+/** Fork extension: planning only; migrating remains an explicit reviewed change. */
 import { z } from 'zod';
 import { existsSync, readFileSync } from 'node:fs';
 import { requireProduct, readDocument, safePath, sha256 } from '../product-workspace.js';

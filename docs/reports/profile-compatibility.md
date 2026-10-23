@@ -7,7 +7,7 @@ updated: 2026-10-23
 
 # Основание и границы
 
-Исходный код: [h2nguyen/Arc42-Node-MCP-Server](https://github.com/h2nguyen/Arc42-Node-MCP-Server), upstream commit `64afae9c5779d167789f9315a111b4b944c690d7`, версия 2.3.1. Форк: [max-miksher/Arc42-Node-MCP-Server](https://github.com/max-miksher/Arc42-Node-MCP-Server), ветка feat/profile-workspace, пакет 2.4.0-dogma.1. Нормативный источник: [профиль владельца от 2026-10-12](https://drive.google.com/file/d/18g_j2ehMx76VEU0RKGZ_lTD90Am3EyVA/view), загружен и прочитан 2026-10-23. Профиль не копируется в форк как второй источник истины.
+Исходный код: [h2nguyen/Arc42-Node-MCP-Server](https://github.com/h2nguyen/Arc42-Node-MCP-Server), upstream commit `64afae9c5779d167789f9315a111b4b944c690d7`, версия 2.3.1. Форк: [max-miksher/Arc42-Node-MCP-Server](https://github.com/max-miksher/Arc42-Node-MCP-Server), ветка feat/profile-workspace, пакет 2.4.0-profile.1. Нормативный источник: [профиль владельца от 2026-10-12](https://drive.google.com/file/d/18g_j2ehMx76VEU0RKGZ_lTD90Am3EyVA/view), загружен и прочитан 2026-10-23. Профиль не копируется в форк как второй источник истины.
 
 Изучены исходники server/tools/types/templates, существующие ADR в docs/arc42-docs, unit/integration tests, stdio-контракт, Skill, CI, LICENSE/NOTICE/LICENSE-ARC42. Сохранены реестр инструментов, upstream-история, vendor submodule и прежние форматы.
 
@@ -75,4 +75,4 @@ npm lifecycle pretest:coverage собирает dist перед coverage, поэ
 
 Исходная Git-история сохранена, upstream доступен отдельным remote. Изменения сосредоточены в новых product-модулях, реестре и коротких ветках существующих handlers. После обновления upstream требуется повторная сборка и весь suite: гарантия бесконфликтного merge не заявляется.
 
-Ни один legacy-документ пользователя не перенесён автоматически. Материалы Dogma вне нового checkout не редактировались. Существующая документация самого upstream также не мигрировалась массово.
+Ни один legacy-документ пользователя не перенесён автоматически. Материалы вне нового checkout не редактировались. Существующая документация самого upstream также не мигрировалась массово.

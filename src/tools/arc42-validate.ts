@@ -1,4 +1,4 @@
-/** Dogma fork: read-only validation. */
+/** Fork extension: read-only validation. */
 import { z } from 'zod';
 import { requireProduct } from '../product-workspace.js';
 import { DEFAULT_LIMITS, validateWorkspace } from '../product-validation.js';

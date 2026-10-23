@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 import { readFileSync } from 'node:fs';
 
 export default defineConfig({
-  // Modified in the Dogma fork: pass the canonical compiler settings explicitly.
+  // Modified in this fork: pass the canonical compiler settings explicitly.
   // OXC's native tsconfig cache fails to discover excluded tests by absolute path.
   oxc: { tsconfig: JSON.parse(readFileSync(new URL('./tsconfig.json', import.meta.url), 'utf8')) },
   test: {

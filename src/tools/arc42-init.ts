@@ -1,5 +1,5 @@
 import { z } from 'zod';
-// Modified in the Dogma fork: opt-in product workspace; legacy defaults retained.
+// Modified in this fork: opt-in product workspace; legacy defaults retained.
 import { initializeProduct, loadProduct, projectRoot, safePath, withProjectLockAsync } from '../product-workspace.js';
 import { ARC42_SECTIONS, type Arc42Section } from '../types.js';
 import { ToolContext, ToolResponse, resolveWorkspaceRoot, getErrorMessage } from '../types.js';

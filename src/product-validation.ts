@@ -1,4 +1,4 @@
-/** Dogma fork: structural checks; architectural truth still requires human review. */
+/** Fork extension: structural checks; architectural truth still requires human review. */
 import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { marked, type Token } from 'marked';

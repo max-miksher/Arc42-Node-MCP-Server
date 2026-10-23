@@ -4,7 +4,7 @@
  * Spawns the BUILT server (dist/index.js) and drives it over stdio JSON-RPC,
  * asserting the contracts documented in .claude/skills/arc42-docs-mcp/SKILL.md:
  *
- * Modified in the Dogma fork: preserve upstream tools and test the product profile.
+ * Modified in this fork: preserve upstream tools and test the product profile.
  * 1. tools/list exposes the 6 upstream tools plus product tools
  * 2. The "Starting Fresh" workflow works end-to-end with targetFolder
  * 3. Error paths return actionable recovery guidance
