@@ -1,6 +1,6 @@
 import { z } from 'zod';
 // Modified in the Dogma fork: opt-in product workspace; legacy defaults retained.
-import { initializeProduct } from '../product-workspace.js';
+import { initializeProduct, loadProduct } from '../product-workspace.js';
 import { ARC42_SECTIONS, type Arc42Section } from '../types.js';
 import { ToolContext, ToolResponse, resolveWorkspaceRoot, getErrorMessage } from '../types.js';
 import {
@@ -57,6 +57,9 @@ export async function arc42InitHandler(
     try { return initializeProduct(args, context); }
     catch (error) { return { success: false, message: getErrorMessage(error) }; }
   }
+  try {
+    if (loadProduct(context, args.targetFolder)) return { success: false, message: 'Product workspace already exists; use arc42-status and arc42-document. Upstream init would create an ambiguous configuration.' };
+  } catch (error) { return { success: false, message: getErrorMessage(error) }; }
   const projectNameArg = args.projectName;
   const force = (args.force as boolean) ?? false;
   const targetFolder = args.targetFolder as string | undefined;

@@ -68,6 +68,12 @@ export function safePath(root: string, path: string): string {
   const absolute = resolve(root, ...parts);
   const inside = relative(resolve(root), absolute);
   if (inside.startsWith('..' + sep) || isAbsolute(inside)) throw new Error('Path escapes project');
+  // Validate the trust boundary itself, not only the path appended to it.
+  for (let ancestor = resolve(root); ; ancestor = dirname(ancestor)) {
+    try { if (lstatSync(ancestor).isSymbolicLink()) throw new Error('Symlink root is not allowed: ' + ancestor); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    if (dirname(ancestor) === ancestor) break;
+  }
   let current = resolve(root);
   for (const part of parts) {
     current = join(current, part);
@@ -85,6 +91,7 @@ function validateConfig(config: ProductConfig): void {
     const path = config.sections[section];
     if (!path?.endsWith('.md')) throw new Error('Every section must map to a .md path: ' + section);
     safePath('/virtual-profile-root', path);
+    if (path.split('/').some(part => ['vendor', 'dist', 'build', 'coverage', '.superpowers'].includes(part))) throw new Error('Section cannot be inside an ignored generated tree');
     return path;
   });
   if (Object.keys(config.sections).length !== ARC42_SECTIONS.length || new Set(paths).size !== paths.length) {
@@ -129,10 +136,19 @@ export function parseDocument(content: string): { metadata: z.infer<typeof metad
   return { metadata: metadataSchema.parse(parse(match[1], { maxAliasCount: 20 })), body: content.slice(match[0].length) };
 }
 export function readDocument(workspace: ProductWorkspace, path: string) {
+  const raw = readRawDocument(workspace, path);
+  return { ...raw, metadata: parseDocument(raw.content).metadata };
+}
+
+/** Raw reads allow repairing legacy/broken metadata through the same CAS path. */
+export function readRawDocument(workspace: ProductWorkspace, path: string) {
   const absolute = safePath(workspace.root, path);
   if (!path.endsWith('.md')) throw new Error('Expected a .md document');
   const content = readFileSync(absolute, 'utf8');
-  return { path: absolute, relativePath: path, content, sha256: sha256(content), metadata: parseDocument(content).metadata, wordCount: countWords(content) };
+  let metadata: z.infer<typeof metadataSchema> | null = null;
+  let metadataError: string | null = null;
+  try { metadata = parseDocument(content).metadata; } catch (error) { metadataError = String(error); }
+  return { path: absolute, relativePath: path, content, sha256: sha256(content), metadata, metadataError, wordCount: countWords(content) };
 }
 
 /** Cooperative lock across server processes. A crash leaves a lock for manual review. */
@@ -180,6 +196,7 @@ export function initializeProduct(args: Record<string, unknown>, context: ToolCo
   if (args.format === 'adoc') throw new Error('Product profile requires Markdown');
   const overrides = z.record(z.enum(ARC42_SECTIONS as unknown as [Arc42Section, ...Arc42Section[]]), z.string()).parse(args.sections ?? {});
   const docsDir = z.string().parse(args.docsDir ?? 'docs');
+  if (docsDir.split('/').some(part => ['.arc42.yaml', '.arc42.lock', 'arc42-docs', 'vendor', 'dist', 'build', 'coverage', '.superpowers'].includes(part))) throw new Error('docsDir collides with service files or generated trees');
   const config = configSchema.parse({
     version: 1, profile: 'product', projectName: args.projectName,
     docsDir, language: String(args.language ?? 'EN').toUpperCase(),

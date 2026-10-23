@@ -4,7 +4,8 @@
  * Spawns the BUILT server (dist/index.js) and drives it over stdio JSON-RPC,
  * asserting the contracts documented in .claude/skills/arc42-docs-mcp/SKILL.md:
  *
- * 1. tools/list exposes exactly the 6 tools with format alias enums and defaults
+ * Modified in the Dogma fork: preserve upstream tools and test the product profile.
+ * 1. tools/list exposes the 6 upstream tools plus product tools
  * 2. The "Starting Fresh" workflow works end-to-end with targetFolder
  * 3. Error paths return actionable recovery guidance
  *
@@ -153,6 +154,7 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
         'update-section'
       ]));
       expect(names).toContain('arc42-document');
+      expect(names).toEqual(expect.arrayContaining(['arc42-validate', 'arc42-inventory', 'arc42-migration-plan']));
     });
 
     it('should accept format aliases md/adoc in every format-bearing tool', async () => {
@@ -334,5 +336,41 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
         (result.isError && /validation/i.test(result.rawText ?? ''));
       expect(rejected).toBe(true);
     });
+  });
+
+  it('supports a product workspace through the built stdio server with safe patching and read-only migration', async () => {
+    const product = createTempDir('arc42-product-protocol');
+    try {
+      const initialized = await client.callTool('arc42-init', {
+        projectName: 'Product protocol', profile: 'product', language: 'RU',
+        targetFolder: product.path
+      });
+      expect(initialized.isError).toBe(false);
+      expect(initialized.payload!.data.format).toBe('markdown');
+      const get = await client.callTool('get-section', { section: '05_building_block_view', targetFolder: product.path });
+      expect(get.isError).toBe(false);
+      const oldText = get.payload!.data.content;
+      const edit = await client.callTool('arc42-document', {
+        action: 'edit', path: 'architecture/05-building-block-view/README.md',
+        expectedHash: get.payload!.data.sha256, oldText,
+        newText: oldText + '\nImplementation remains to be verified.\n', targetFolder: product.path
+      });
+      expect(edit.isError).toBe(false);
+      const stale = await client.callTool('arc42-document', {
+        action: 'edit', path: 'architecture/05-building-block-view/README.md',
+        expectedHash: get.payload!.data.sha256, oldText, newText: oldText, targetFolder: product.path
+      });
+      expect(stale.isError).toBe(true);
+      expect(stale.payload!.message).toContain('Version conflict');
+      const validated = await client.callTool('arc42-validate', { targetFolder: product.path });
+      expect(validated.isError).toBe(false);
+      expect(validated.payload!.data.valid).toBe(true);
+      const inventory = await client.callTool('arc42-inventory', { targetFolder: product.path });
+      expect(inventory.isError).toBe(false);
+      expect(inventory.payload!.data.files.length).toBeGreaterThanOrEqual(3);
+      expect(inventory.payload!.data.truncated).toBe(false);
+      const wrongArgs = await client.callTool('arc42-document', { action: 'edit', path: 'x.md', expectedHash: 'wrong', targetFolder: product.path });
+      expect(wrongArgs.isError || wrongArgs.protocolError).toBeTruthy();
+    } finally { product.cleanup(); }
   });
 });

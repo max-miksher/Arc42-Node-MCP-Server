@@ -108,6 +108,36 @@ describe('product profile workspace', () => {
     expect((await getSectionHandler({ section }, context)).success).toBe(false);
   });
 
+  it('prevents upstream init from making a product project ambiguous', async () => {
+    await init();
+    const result = await arc42InitHandler({ projectName: 'Other' }, context);
+    expect(result.success).toBe(false);
+    expect(existsSync(context.workspaceRoot)).toBe(false);
+    expect((await getSectionHandler({ section }, context)).success).toBe(true);
+  });
+
+  it('rejects config/lock collisions and ignored destinations before initialization', async () => {
+    for (const docsDir of ['.arc42.yaml', '.arc42.yaml/nested', '.arc42.lock', 'arc42-docs', 'vendor/docs']) {
+      expect((await init({ docsDir })).success, docsDir).toBe(false);
+      expect(existsSync(join(context.projectPath, '.arc42.yaml'))).toBe(false);
+      expect(existsSync(join(context.projectPath, docsDir))).toBe(false);
+    }
+    expect((await init({ sections: { [section]: 'vendor/level1.md' } })).success).toBe(false);
+  });
+
+  it('accepts repairs of malformed Markdown with a versioned exact patch', async () => {
+    await init();
+    const file = join(context.projectPath, 'docs', blockPath);
+    writeFileSync(file, '# Existing architecture\n\nKeep this content.');
+    const before = await document({ action: 'read', path: blockPath });
+    expect(before.success).toBe(true);
+    expect(before.data.metadataError).toBeTruthy();
+    const content = '---\ntitle: Existing\ntype: architecture\nstatus: draft\nupdated: 2026-10-23\n---\n\n' + before.data.content;
+    const repaired = await document({ action: 'edit', path: blockPath, expectedHash: before.data.sha256, oldText: before.data.content, newText: content });
+    expect(repaired.success).toBe(true);
+    expect(readFileSync(file, 'utf8')).toContain('Keep this content.');
+  });
+
   it('rejects concurrent updates rather than losing one', async () => {
     await init();
     const before = await document({ action: 'read', path: blockPath });

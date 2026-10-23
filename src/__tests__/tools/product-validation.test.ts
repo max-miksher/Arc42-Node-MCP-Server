@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdirSync, readFileSync, writeFileSync, existsSync, symlinkSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, symlinkSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createTestContext } from '../fixtures/test-helpers.js';
 import type { ToolContext } from '../../types.js';
@@ -122,5 +122,42 @@ describe('product validation and gradual migration', () => {
     expect(existsSync(join(context.projectPath, 'docs', target))).toBe(false);
     expect(readFileSync(join(context.projectPath, 'old/ARCH.md'), 'utf8')).toBe(before);
     expect((await call('arc42-migration-plan', { requirement: `${blocks}/README.md`, items: [{ source: 'old/ARCH.md', target, reason: 'Scope' }] })).success).toBe(false);
+  });
+
+  it('does not accept a directory in place of the required section or docs index', async () => {
+    for (const path of ['README.md', `${blocks}/README.md`]) {
+      unlinkSync(join(context.projectPath, 'docs', path));
+      mkdirSync(join(context.projectPath, 'docs', path));
+    }
+    const result = await call('arc42-validate');
+    expect(result.data.valid).toBe(false);
+    expect(result.data.issues.some((issue: any) => ['required-section', 'index'].includes(issue.code))).toBe(true);
+  });
+
+  it('supports non-README section roots and flat ADR/runtime roots', async () => {
+    const configPath = join(context.projectPath, '.arc42.yaml');
+    const { parse, stringify } = await import('yaml');
+    const config = parse(readFileSync(configPath, 'utf8'));
+    config.sections['05_building_block_view'] = 'design/components/index.md';
+    config.sections['09_architecture_decisions'] = 'decisions.md';
+    config.sections['06_runtime_view'] = 'runtime.md';
+    writeFileSync(configPath, stringify(config));
+    put('design/components/index.md', markdown('Level 1', 'architecture', '# Level 1'));
+    const blockPath = 'design/components/building-blocks/api/README.md';
+    expect((await call('arc42-document', { action: 'create', path: blockPath, content: markdown('API', 'architecture', '# API\n\nHTTP API.', { kind: 'building-block', parent: config.sections['05_building_block_view'] }) })).success).toBe(true);
+    expect((await call('arc42-document', { action: 'create', path: 'scenarios/http.md', content: markdown('HTTP', 'architecture', '# HTTP\n\nAPI processes a request.', { kind: 'runtime-scenario', blocks: [blockPath] }) })).success).toBe(true);
+    expect((await call('arc42-document', { action: 'create', path: 'ADR-0001-api.md', content: markdown('API', 'adr', '# API\n\n## Context and Problem Statement\n\nNeed an API.\n\n## Considered Options\n\n- HTTP\n- RPC\n\n## Decision Outcome\n\nHTTP.', { date: today(), decision_status: 'proposed' }) })).success).toBe(true);
+  });
+
+  it('rejects treating the Level 1 system overview as a runtime participant', async () => {
+    put('architecture/06-runtime-view/scenarios/root.md', markdown('Root', 'architecture', '# Root', { kind: 'runtime-scenario', blocks: [`${blocks}/README.md`] }));
+    expect(await codes()).toContain('runtime-block');
+  });
+
+  it('requires review of decomposition evidence even after structural checks pass', async () => {
+    const parent = `${blocks}/building-blocks/api/README.md`;
+    put(parent, markdown('API', 'architecture', '# API', { kind: 'building-block', parent: `${blocks}/README.md` }));
+    put(`${blocks}/building-blocks/api/building-blocks/store/README.md`, markdown('Store', 'architecture', '# Store', { kind: 'building-block', parent, decomposition: { trigger: 2, evidence: [requirement] } }));
+    expect(await codes()).toContain('decomposition-review');
   });
 });

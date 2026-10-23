@@ -13,7 +13,7 @@ export const DEFAULT_LIMITS: ScanLimits = { maxFiles: 5000, maxBytes: 2_000_000,
 const IGNORED = new Set(['.git', 'node_modules', 'vendor', 'dist', 'build', 'coverage', '.superpowers']);
 export interface ScanResult { paths: string[]; warnings: Issue[]; truncated: boolean; limits: ScanLimits }
 
-export function scanDocuments(root: string, roots: string[], limits: ScanLimits = DEFAULT_LIMITS): ScanResult {
+export function scanDocuments(root: string, roots: string[], limits: ScanLimits = DEFAULT_LIMITS, ignoreGenerated = true): ScanResult {
   const result: ScanResult = { paths: [], warnings: [], truncated: false, limits };
   let visited = 0;
   function walk(absolute: string, depth: number): void {
@@ -26,7 +26,7 @@ export function scanDocuments(root: string, roots: string[], limits: ScanLimits 
     }
     if (stats.isDirectory()) {
       for (const entry of readdirSync(absolute).sort()) {
-        if (!IGNORED.has(entry)) walk(join(absolute, entry), depth + 1);
+        if (!ignoreGenerated || !IGNORED.has(entry)) walk(join(absolute, entry), depth + 1);
         if (visited > limits.maxFiles) break;
       }
     } else if (stats.isFile() && ['.md', '.adoc', '.txt'].includes(extname(path).toLowerCase())) {
@@ -82,7 +82,7 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
   function ref(target: unknown, code: string, role?: (doc: ReturnType<typeof readDocument>, path: string) => boolean) {
     try {
       if (typeof target !== 'string') throw new Error('Reference must be a docs-relative string');
-      const referenced = target === path ? { ...parseDocument(content), relativePath: path, path, content, sha256: sha256(content), wordCount: 0 } : readDocument(workspace, target);
+      const referenced = target === path ? { ...parseDocument(content), relativePath: path, path, content, sha256: sha256(content), wordCount: 0, metadataError: null } : readDocument(workspace, target);
       if (role && !role(referenced, target)) throw new Error('Target has the wrong document role');
       if (metadata.status === 'active' && ['deprecated', 'superseded'].includes(referenced.metadata.status)) {
         add('inactive-reference', 'Active document refers to inactive source: ' + target, 'warning');
@@ -126,10 +126,11 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
   if (category === 'requirements' && !/^requirements\/\d{4}-\d{2}-\d{2}-[^/]+\/[^/]+\.md$/.test(path)) add('requirement-layout', 'Requirement must be inside YYYY-MM-DD-slug/');
 
   const decisionsRoot = dirname(workspace.config.sections['09_architecture_decisions']);
-  if ((path.startsWith(decisionsRoot + '/ADR-') || metadata.type === 'adr')) {
-    if (metadata.type !== 'adr' || !path.startsWith(decisionsRoot + '/ADR-') || !/^ADR-\d{4,}-[^/]+\.md$/.test(path.split('/').at(-1)!)) add('madr', 'Separate ADR requires ADR-xxxx-slug.md under section 9 and type: adr');
-    const decision = z.object({ date: dateSchema, decision_status: z.enum(['proposed', 'accepted', 'rejected', 'deprecated', 'superseded']), 'decision-makers': z.array(z.string().min(1)).min(1) }).safeParse(metadata);
-    if (!decision.success) add('madr', 'ADR requires date, decision_status and decision-makers; document status remains draft/active/deprecated/superseded');
+  const adrPrefix = join(decisionsRoot, 'ADR-').split('\\').join('/');
+  if ((path.startsWith(adrPrefix) || metadata.type === 'adr')) {
+    if (metadata.type !== 'adr' || !path.startsWith(adrPrefix) || !/^ADR-\d{4,}-[^/]+\.md$/.test(path.split('/').at(-1)!)) add('madr', 'Separate ADR requires ADR-xxxx-slug.md under section 9 and type: adr');
+    const decision = z.object({ date: dateSchema, decision_status: z.enum(['proposed', 'accepted', 'rejected', 'deprecated', 'superseded']), 'decision-makers': z.array(z.string().min(1)).min(1).optional() }).safeParse(metadata);
+    if (!decision.success) add('madr', 'ADR adapter requires date and decision_status; document status remains draft/active/deprecated/superseded');
     const headings = tokens(body).flatMap(token => token.type === 'heading' ? [token.text] : []);
     for (const heading of ['Context and Problem Statement', 'Considered Options', 'Decision Outcome']) {
       if (!headings.includes(heading)) add('madr', 'Missing MADR minimal heading: ' + heading);
@@ -143,20 +144,22 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
   if (isBlock || metadata.kind === 'building-block') {
     if (!isBlock || metadata.kind !== 'building-block' || metadata.type !== 'architecture') add('building-block', 'Block requires kind: building-block and nested building-blocks/name/README.md layout');
     const segments = blockRelative.split('/');
-    const expectedParent = join(blocksRoot, ...segments.slice(0, -3), 'README.md').split('\\').join('/');
+    const expectedParent = segments.length === 3 ? workspace.config.sections['05_building_block_view'] : join(blocksRoot, ...segments.slice(0, -3), 'README.md').split('\\').join('/');
     if (metadata.parent !== expectedParent) add('building-block', 'Expected parent: ' + expectedParent);
     ref(metadata.parent, 'building-block', (doc, target) => target === workspace.config.sections['05_building_block_view'] || doc.metadata.kind === 'building-block');
     if (segments.filter(segment => segment === 'building-blocks').length > 1) {
       const decomposition = z.object({ trigger: z.number().int().min(1).max(5), evidence: z.array(z.string().min(1)).min(1) }).safeParse(metadata.decomposition);
       if (!decomposition.success) add('decomposition', 'Nested block requires trigger 1..5 and evidence paths for the current requirement/ADR/scenario/risk/quality requirement');
       else for (const evidence of decomposition.data.evidence) ref(evidence, 'decomposition', (doc, target) => ['requirement', 'adr'].includes(doc.metadata.type) || doc.metadata.kind === 'runtime-scenario' || [workspace.config.sections['10_quality_requirements'], workspace.config.sections['11_technical_risks']].includes(target));
+      add('decomposition-review', 'Review whether the selected trigger actually holds in the linked evidence; structural validation cannot establish that.', 'warning');
     }
   }
   const runtimeRoot = dirname(workspace.config.sections['06_runtime_view']);
-  if (path.startsWith(runtimeRoot + '/scenarios/') || metadata.kind === 'runtime-scenario') {
-    if (!path.startsWith(runtimeRoot + '/scenarios/') || metadata.kind !== 'runtime-scenario' || metadata.type !== 'architecture') add('runtime-block', 'Scenario requires kind: runtime-scenario under section 6/scenarios/');
+  const scenarioPrefix = join(runtimeRoot, 'scenarios').split('\\').join('/') + '/';
+  if (path.startsWith(scenarioPrefix) || metadata.kind === 'runtime-scenario') {
+    if (!path.startsWith(scenarioPrefix) || metadata.kind !== 'runtime-scenario' || metadata.type !== 'architecture') add('runtime-block', 'Scenario requires kind: runtime-scenario under section 6/scenarios/');
     if (!Array.isArray(metadata.blocks) || !metadata.blocks.length) add('runtime-block', 'Scenario must identify building blocks');
-    else for (const block of metadata.blocks) ref(block, 'runtime-block', (doc, target) => doc.metadata.kind === 'building-block' || target === workspace.config.sections['05_building_block_view']);
+    else for (const block of metadata.blocks) ref(block, 'runtime-block', doc => doc.metadata.kind === 'building-block' && doc.metadata.type === 'architecture');
   }
 
   marked.walkTokens(tokens(body), (token: Token) => {
@@ -177,13 +180,19 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
 }
 
 export function validateWorkspace(workspace: ProductWorkspace, limits = DEFAULT_LIMITS) {
-  const scan = scanDocuments(workspace.root, ['.'], limits);
+  const scan = scanDocuments(workspace.root, ['.'], limits, false);
   const issues = [...scan.warnings];
+  const isFile = (path: string) => {
+    try { return lstatSync(safePath(workspace.root, path)).isFile(); } catch { return false; }
+  };
   for (const section of workspace.config.requiredSections) {
-    if (!existsSync(safePath(workspace.root, workspace.config.sections[section]))) issues.push({ code: 'required-section', path: workspace.config.sections[section], severity: 'error', message: 'Required arc42 section is missing' });
+    if (!isFile(workspace.config.sections[section])) issues.push({ code: 'required-section', path: workspace.config.sections[section], severity: 'error', message: 'Required arc42 section must be a regular file' });
   }
-  if (!existsSync(safePath(workspace.root, 'README.md'))) issues.push({ code: 'index', path: 'README.md', severity: 'error', message: 'Documentation index missing' });
-  for (const path of scan.paths.filter(path => path.endsWith('.md'))) issues.push(...documentIssues(workspace, path, readFileSync(safePath(workspace.root, path), 'utf8')));
+  if (!isFile('README.md')) issues.push({ code: 'index', path: 'README.md', severity: 'error', message: 'Documentation index must be a regular file' });
+  for (const path of scan.paths.filter(path => path.toLowerCase().endsWith('.md'))) {
+    try { issues.push(...documentIssues(workspace, path, readFileSync(safePath(workspace.root, path), 'utf8'))); }
+    catch (error) { issues.push({ code: 'read', path, severity: 'error', message: String(error) }); }
+  }
   for (const path of scan.paths.filter(path => /^requirements\//.test(path))) {
     const description = join(dirname(path), 'описание.md').split('\\').join('/');
     if (!existsSync(safePath(workspace.root, description))) issues.push({ code: 'requirement-layout', path, severity: 'error', message: 'Request folder requires описание.md' });

@@ -1,7 +1,7 @@
 /** Dogma fork: document operations with metadata and compare-and-swap. */
 import { z } from 'zod';
 import { getErrorMessage, type ToolContext, type ToolResponse } from '../types.js';
-import { requireProduct, readDocument, writeDocument } from '../product-workspace.js';
+import { requireProduct, readDocument, readRawDocument, writeDocument } from '../product-workspace.js';
 
 export const arc42DocumentInputSchema = {
   action: z.enum(['read', 'create', 'edit']), path: z.string().min(1).describe('Document path relative to configured docsDir'),
@@ -15,13 +15,13 @@ export async function arc42DocumentHandler(args: Record<string, unknown>, contex
   try {
     const input = z.object(arc42DocumentInputSchema).parse(args);
     const workspace = requireProduct(context, input.targetFolder);
-    if (input.action === 'read') return { success: true, message: 'Document read', data: readDocument(workspace, input.path) };
+    if (input.action === 'read') return { success: true, message: 'Document read', data: readRawDocument(workspace, input.path) };
     if (input.action === 'create') {
       if (!input.content) throw new Error('content is required for create');
       writeDocument(workspace, input.path, input.content);
     } else {
       if (!input.expectedHash || !input.oldText || input.newText === undefined) throw new Error('edit requires expectedHash, oldText and newText');
-      const current = readDocument(workspace, input.path);
+      const current = readRawDocument(workspace, input.path);
       if (current.sha256 !== input.expectedHash) throw new Error('Version conflict: read document again');
       const first = current.content.indexOf(input.oldText);
       if (first < 0 || current.content.indexOf(input.oldText, first + 1) >= 0) throw new Error('oldText must match exactly once');
