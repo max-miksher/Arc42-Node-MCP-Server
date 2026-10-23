@@ -168,10 +168,12 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
 
     it('should declare asciidoc as the default format', async () => {
       const tools = await client.listTools();
-      for (const name of ['arc42-workflow-guide', 'arc42-init', 'generate-template']) {
+      for (const name of ['arc42-workflow-guide', 'generate-template']) {
         const tool = tools.find(t => t.name === name)!;
         expect(tool.inputSchema?.properties?.format?.default, `${name} format default`).toBe('asciidoc');
       }
+      // Init has a conditional runtime default: upstream=AsciiDoc, product=Markdown.
+      expect(tools.find(t => t.name === 'arc42-init')!.inputSchema?.properties?.format?.default).toBeUndefined();
     });
 
     it('should declare replace as the default update-section mode', async () => {

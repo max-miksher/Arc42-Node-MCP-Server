@@ -116,6 +116,25 @@ describe('product profile workspace', () => {
     expect((await getSectionHandler({ section }, context)).success).toBe(true);
   });
 
+  it('serializes concurrent init across both profile modes', async () => {
+    const pendingUpstream = arc42InitHandler({ projectName: 'Legacy' }, context);
+    // Upstream is suspended on its first async filesystem call. The lock must
+    // already be present before product init can observe any directory changes.
+    expect(existsSync(join(context.projectPath, '.arc42.lock'))).toBe(true);
+    const [upstream, product] = await Promise.all([pendingUpstream, init()]);
+    expect([upstream, product].filter(result => result.success)).toHaveLength(1);
+    expect(existsSync(context.workspaceRoot) && existsSync(join(context.projectPath, '.arc42.yaml'))).toBe(false);
+    expect((await arc42StatusHandler({}, context)).success).toBe(true);
+  });
+
+  it('initializes a missing target project and rejects conflicting document roles', async () => {
+    expect((await init({ sections: { [section]: 'notes/level1.md' } })).success).toBe(false);
+    const targetFolder = join(context.projectPath, 'new-project');
+    const created = await init({ targetFolder });
+    expect(created.success).toBe(true);
+    expect(existsSync(join(targetFolder, '.arc42.yaml'))).toBe(true);
+  });
+
   it('rejects config/lock collisions and ignored destinations before initialization', async () => {
     for (const docsDir of ['.arc42.yaml', '.arc42.yaml/nested', '.arc42.lock', 'arc42-docs', 'vendor/docs']) {
       expect((await init({ docsDir })).success, docsDir).toBe(false);
@@ -123,6 +142,19 @@ describe('product profile workspace', () => {
       expect(existsSync(join(context.projectPath, docsDir))).toBe(false);
     }
     expect((await init({ sections: { [section]: 'vendor/level1.md' } })).success).toBe(false);
+  });
+
+  it('rejects explicit AsciiDoc formats in a product project', async () => {
+    expect((await init({ format: 'asciidoc' })).success).toBe(false);
+    expect((await init({ format: 'adoc' })).success).toBe(false);
+    expect(existsSync(join(context.projectPath, '.arc42.yaml'))).toBe(false);
+  });
+
+  it('rejects a symlink project root and leaves its real target unchanged', async () => {
+    mkdirSync(join(context.projectPath, 'real'));
+    symlinkSync(join(context.projectPath, 'real'), join(context.projectPath, 'alias'));
+    expect((await init({ targetFolder: join(context.projectPath, 'alias') })).success).toBe(false);
+    expect(existsSync(join(context.projectPath, 'real/.arc42.yaml'))).toBe(false);
   });
 
   it('accepts repairs of malformed Markdown with a versioned exact patch', async () => {

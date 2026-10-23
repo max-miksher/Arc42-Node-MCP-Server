@@ -97,7 +97,7 @@ function validateConfig(config: ProductConfig): void {
   if (Object.keys(config.sections).length !== ARC42_SECTIONS.length || new Set(paths).size !== paths.length) {
     throw new Error('Section mapping must contain exactly 12 unique paths');
   }
-  const reserved = ['README.md', 'requirements'];
+  const reserved = ['README.md', 'requirements', 'notes', 'plans', 'how-to', 'reference', 'tutorials', 'explanation'];
   for (const path of paths) {
     if (reserved.some(name => path === name || path.startsWith(name + '/')) || paths.some(other => path.startsWith(other + '/'))) {
       throw new Error('Overlapping or reserved section mapping: ' + path);
@@ -152,7 +152,7 @@ export function readRawDocument(workspace: ProductWorkspace, path: string) {
 }
 
 /** Cooperative lock across server processes. A crash leaves a lock for manual review. */
-export function withProjectLock<T>(projectPath: string, action: () => T): T {
+function acquireProjectLock(projectPath: string): () => void {
   const lock = safePath(projectPath, '.arc42.lock');
   let descriptor: number;
   try { descriptor = openSync(lock, 'wx', 0o600); }
@@ -160,10 +160,19 @@ export function withProjectLock<T>(projectPath: string, action: () => T): T {
     if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('Workspace locked. Retry after current operation; inspect .arc42.lock after a crash.');
     throw error;
   }
-  try {
-    writeFileSync(descriptor, JSON.stringify({ pid: process.pid, created: new Date().toISOString() }));
-    return action();
-  } finally { closeSync(descriptor); unlinkSync(lock); }
+  try { writeFileSync(descriptor, JSON.stringify({ pid: process.pid, created: new Date().toISOString() })); }
+  catch (error) { closeSync(descriptor); unlinkSync(lock); throw error; }
+  return () => { closeSync(descriptor); unlinkSync(lock); };
+}
+
+export function withProjectLock<T>(projectPath: string, action: () => T): T {
+  const release = acquireProjectLock(projectPath);
+  try { return action(); } finally { release(); }
+}
+
+export async function withProjectLockAsync<T>(projectPath: string, action: () => Promise<T>): Promise<T> {
+  const release = acquireProjectLock(projectPath);
+  try { return await action(); } finally { release(); }
 }
 
 export function writeDocument(workspace: ProductWorkspace, path: string, content: string, expectedHash?: string): void {
@@ -191,9 +200,7 @@ export function writeDocument(workspace: ProductWorkspace, path: string, content
 export function initializeProduct(args: Record<string, unknown>, context: ToolContext): ToolResponse {
   const projectPath = projectRoot(context, args.targetFolder);
   if (args.force) throw new Error('force is not supported by product profile; existing documents must be preserved');
-  // MCP defaults to AsciiDoc for upstream; product mode deliberately selects Markdown.
-  if (args.format && args.format !== 'markdown' && args.format !== 'md' && args.format !== 'asciidoc') throw new Error('Product profile requires Markdown');
-  if (args.format === 'adoc') throw new Error('Product profile requires Markdown');
+  if (args.format && args.format !== 'markdown' && args.format !== 'md') throw new Error('Product profile requires Markdown');
   const overrides = z.record(z.enum(ARC42_SECTIONS as unknown as [Arc42Section, ...Arc42Section[]]), z.string()).parse(args.sections ?? {});
   const docsDir = z.string().parse(args.docsDir ?? 'docs');
   if (docsDir.split('/').some(part => ['.arc42.yaml', '.arc42.lock', 'arc42-docs', 'vendor', 'dist', 'build', 'coverage', '.superpowers'].includes(part))) throw new Error('docsDir collides with service files or generated trees');
@@ -221,6 +228,7 @@ export function initializeProduct(args: Record<string, unknown>, context: ToolCo
   const links = [...documents.keys()].map(path => `- [${path}](${encodeURI(path)})`).join('\n');
   documents.set('README.md', markdown(config.projectName + ' — документация', 'index', `# ${config.projectName}\n\n${links}\n\n[arc42](https://arc42.org/) — Gernot Starke, Peter Hruschka; шаблоны CC BY-SA 4.0. Локальная раскладка и метаданные изменены.\n\nЧерновики требуют проверки; наличие файлов не доказывает полноту или истинность архитектуры.`));
   for (const path of documents.keys()) safePath(root, path);
+  mkdirSync(projectPath, { recursive: true });
   return withProjectLock(projectPath, () => {
     if (existsSync(root) || existsSync(configPath)) throw new Error('Workspace already exists');
     for (const [path, content] of documents) {

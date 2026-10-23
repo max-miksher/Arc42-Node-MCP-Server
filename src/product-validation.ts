@@ -131,9 +131,26 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
     if (metadata.type !== 'adr' || !path.startsWith(adrPrefix) || !/^ADR-\d{4,}-[^/]+\.md$/.test(path.split('/').at(-1)!)) add('madr', 'Separate ADR requires ADR-xxxx-slug.md under section 9 and type: adr');
     const decision = z.object({ date: dateSchema, decision_status: z.enum(['proposed', 'accepted', 'rejected', 'deprecated', 'superseded']), 'decision-makers': z.array(z.string().min(1)).min(1).optional() }).safeParse(metadata);
     if (!decision.success) add('madr', 'ADR adapter requires date and decision_status; document status remains draft/active/deprecated/superseded');
-    const headings = tokens(body).flatMap(token => token.type === 'heading' ? [token.text] : []);
+    const sequence = tokens(body);
+    const headings = sequence.flatMap(token => token.type === 'heading' ? [token.text] : []);
     for (const heading of ['Context and Problem Statement', 'Considered Options', 'Decision Outcome']) {
       if (!headings.includes(heading)) add('madr', 'Missing MADR minimal heading: ' + heading);
+      else {
+        const start = sequence.findIndex(token => token.type === 'heading' && token.text === heading);
+        const after = sequence.slice(start + 1);
+        const boundary = after.findIndex(token => token.type === 'heading');
+        const sectionTokens = boundary < 0 ? after : after.slice(0, boundary);
+        if (!sectionTokens.some(token => token.type !== 'space' && token.type !== 'html' && token.raw.trim())) add('madr', 'Empty MADR section: ' + heading);
+      }
+    }
+    const number = /^ADR-(\d+)-/.exec(path.split('/').at(-1)!)?.[1];
+    const directory = safePath(workspace.root, decisionsRoot === '.' ? path : decisionsRoot);
+    const parentDirectory = decisionsRoot === '.' ? dirname(directory) : directory;
+    if (number && existsSync(parentDirectory)) {
+      for (const sibling of readdirSync(parentDirectory)) {
+        const siblingPath = join(decisionsRoot, sibling).split('\\').join('/');
+        if (siblingPath !== path && Number(/^ADR-(\d+)-/.exec(sibling)?.[1]) === Number(number)) add('adr-number', 'Duplicate ADR number: ' + siblingPath);
+      }
     }
     if (decision.success && ['deprecated', 'superseded'].includes(decision.data.decision_status) && metadata.status === 'active') add('madr', 'Inactive decision cannot have active document status');
   }
@@ -162,19 +179,33 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
     else for (const block of metadata.blocks) ref(block, 'runtime-block', doc => doc.metadata.kind === 'building-block' && doc.metadata.type === 'architecture');
   }
 
-  marked.walkTokens(tokens(body), (token: Token) => {
-    if (token.type !== 'link' && token.type !== 'image') return;
+  function checkLink(href: string) {
     try {
-      const target = resolveLocal(workspace, path, token.href);
+      const target = resolveLocal(workspace, path, href);
       if (!target) return;
       if (target.absolute !== safePath(workspace.root, path) && !existsSync(target.absolute)) throw new Error('File not found');
+      if (metadata.status === 'active' && target.absolute !== safePath(workspace.root, path) && extname(target.absolute).toLowerCase() === '.md') {
+        try {
+          const referenced = parseDocument(readFileSync(target.absolute, 'utf8'));
+          if (['deprecated', 'superseded'].includes(referenced.metadata.status)) add('inactive-reference', 'Active document links to inactive source: ' + href, 'warning');
+        } catch { /* Malformed target is reported by its own metadata check. */ }
+      }
       if (target.fragment && extname(target.absolute) === '.md') {
         const targetContent = target.absolute === safePath(workspace.root, path) ? content : readFileSync(target.absolute, 'utf8');
         let targetBody = targetContent;
         try { targetBody = parseDocument(targetContent).body; } catch { /* Legacy text is still addressable. */ }
         if (!anchors(targetBody).has(target.fragment)) throw new Error('Heading/anchor not found');
       }
-    } catch (error) { add('link', `${token.href}: ${String(error)}`); }
+    } catch (error) { add('link', `${href}: ${String(error)}`); }
+  }
+  marked.walkTokens(tokens(body), (token: Token) => {
+    if (token.type === 'link' || token.type === 'image') checkLink(token.href);
+    else if (token.type === 'html') {
+      const html = token.raw.replace(/<!--[\s\S]*?-->/g, '');
+      for (const match of html.matchAll(/\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi)) {
+        checkLink((match[1] ?? match[2] ?? match[3]).replace(/&amp;/g, '&'));
+      }
+    }
   });
   return issues;
 }

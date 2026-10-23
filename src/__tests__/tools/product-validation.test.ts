@@ -160,4 +160,27 @@ describe('product validation and gradual migration', () => {
     put(`${blocks}/building-blocks/api/building-blocks/store/README.md`, markdown('Store', 'architecture', '# Store', { kind: 'building-block', parent, decomposition: { trigger: 2, evidence: [requirement] } }));
     expect(await codes()).toContain('decomposition-review');
   });
+
+  it('detects duplicate ADR numbers before creation', async () => {
+    const content = markdown('Storage', 'adr', '# Storage\n\n## Context and Problem Statement\n\nPersistence.\n\n## Considered Options\n\n- Files\n- Database\n\n## Decision Outcome\n\nFiles.', { date: today(), decision_status: 'proposed' });
+    expect((await call('arc42-document', { action: 'create', path: adr, content })).success).toBe(true);
+    const second = await call('arc42-document', { action: 'create', path: adr.replace('storage', 'database'), content });
+    expect(second.success).toBe(false);
+    expect(second.message).toContain('adr-number');
+  });
+
+  it('checks HTML links and inactive Markdown targets without reading code examples', async () => {
+    put('notes/retired.md', markdown('Retired', 'note', '# Retired', { status: 'deprecated' }));
+    put('notes/current.md', markdown('Current', 'note', '# Current\n\n[Old](retired.md)\n\n<a href="missing.md">Missing</a>\n\n`<a href="ignore.md">Example</a>`', { status: 'active' }));
+    const result = await call('arc42-validate');
+    expect(result.data.issues.filter((issue: any) => issue.code === 'link')).toHaveLength(1);
+    expect(result.data.issues.filter((issue: any) => issue.code === 'inactive-reference')).toHaveLength(1);
+  });
+
+  it('rejects empty accepted MADR sections and validates uppercase Markdown files', async () => {
+    put(adr, markdown('Empty', 'adr', '# Empty\n\n## Context and Problem Statement\n\n## Considered Options\n\n## Decision Outcome', { status: 'active', decision_status: 'accepted', date: today() }));
+    put('notes/UPPER.MD', '# Missing frontmatter');
+    expect(await codes()).toContain('madr');
+    expect(await codes()).toContain('metadata');
+  });
 });

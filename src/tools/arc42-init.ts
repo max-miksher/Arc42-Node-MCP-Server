@@ -1,6 +1,6 @@
 import { z } from 'zod';
 // Modified in the Dogma fork: opt-in product workspace; legacy defaults retained.
-import { initializeProduct, loadProduct } from '../product-workspace.js';
+import { initializeProduct, loadProduct, projectRoot, safePath, withProjectLockAsync } from '../product-workspace.js';
 import { ARC42_SECTIONS, type Arc42Section } from '../types.js';
 import { ToolContext, ToolResponse, resolveWorkspaceRoot, getErrorMessage } from '../types.js';
 import {
@@ -17,7 +17,7 @@ import {
   type OutputFormatStrategy
 } from '../templates/index.js';
 import { mkdir, writeFile } from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 // Zod schema as the SINGLE SOURCE OF TRUTH for tool input
@@ -33,7 +33,7 @@ export const arc42InitInputSchema = {
   force: z.boolean().optional().describe('Force re-initialization even if the workspace exists. WARNING: this overwrites ALL existing section files with fresh templates — existing content is lost. Confirm with the user first.'),
   targetFolder: z.string().optional().describe('Optional: Absolute path to the target folder where arc42-docs will be created. If not provided, uses the default workspace configured at server startup.'),
   language: z.enum(languageValues).optional().default('EN').describe('Language code for the documentation templates. Supported: EN (English), DE (German), ES (Spanish), FR (French), IT (Italian), NL (Dutch), PT (Portuguese), RU (Russian), CZ (Czech), UKR (Ukrainian), ZH (Chinese). Defaults to EN. Persisted in config.yaml and applied to all later operations.'),
-  format: z.enum(formatValues).optional().default(DEFAULT_OUTPUT_FORMAT).describe(`Output format for documentation files. Supported: markdown (alias: md), asciidoc (alias: adoc). Defaults to ${DEFAULT_OUTPUT_FORMAT}. Persisted in config.yaml and applied to all later operations.`)
+  format: z.enum(formatValues).optional().describe(`Output format: markdown/md or asciidoc/adoc. Default is ${DEFAULT_OUTPUT_FORMAT} for upstream and markdown for product. Product profile requires Markdown. Persisted in workspace configuration.`)
 };
 
 export const arc42InitDescription = `Initialize the arc42 documentation workspace for a project.
@@ -53,13 +53,20 @@ export async function arc42InitHandler(
   args: Record<string, unknown>,
   context: ToolContext
 ): Promise<ToolResponse> {
-  if (args.profile === 'product') {
-    try { return initializeProduct(args, context); }
-    catch (error) { return { success: false, message: getErrorMessage(error) }; }
-  }
   try {
-    if (loadProduct(context, args.targetFolder)) return { success: false, message: 'Product workspace already exists; use arc42-status and arc42-document. Upstream init would create an ambiguous configuration.' };
+    if (args.profile === 'product') return initializeProduct(args, context);
+    if (typeof args.projectName !== 'string' || !args.projectName.trim()) return { success: false, message: 'Project name is required' };
+    const projectPath = projectRoot(context, args.targetFolder);
+    safePath(projectPath, '.arc42.lock');
+    mkdirSync(projectPath, { recursive: true });
+    return await withProjectLockAsync(projectPath, async () => {
+      if (loadProduct(context, args.targetFolder)) return { success: false, message: 'Product workspace already exists; use arc42-status and arc42-document. Upstream init would create an ambiguous configuration.' };
+      return upstreamInitHandler(args, context);
+    });
   } catch (error) { return { success: false, message: getErrorMessage(error) }; }
+}
+
+async function upstreamInitHandler(args: Record<string, unknown>, context: ToolContext): Promise<ToolResponse> {
   const projectNameArg = args.projectName;
   const force = (args.force as boolean) ?? false;
   const targetFolder = args.targetFolder as string | undefined;
