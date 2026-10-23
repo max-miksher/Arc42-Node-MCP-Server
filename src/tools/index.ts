@@ -1,4 +1,9 @@
 import type { ZodRawShape } from 'zod';
+// Modified in this fork: additive product-profile tools.
+import { arc42DocumentHandler, arc42DocumentInputSchema, arc42DocumentDescription } from './arc42-document.js';
+import { arc42ValidateHandler, arc42ValidateInputSchema, arc42ValidateDescription } from './arc42-validate.js';
+import { arc42InventoryHandler, arc42InventoryInputSchema, arc42InventoryDescription } from './arc42-inventory.js';
+import { arc42RecoverHandler, arc42RecoverInputSchema, arc42RecoverDescription } from './arc42-recover.js';
 import { ToolContext, ToolResponse, MCPToolResponse, toMCPResponse } from '../types.js';
 
 // Re-export tool handlers and schemas (Single Source of Truth pattern)
@@ -87,6 +92,10 @@ export interface ToolDefinition {
  * this registry, so adding a tool requires exactly one new entry here.
  */
 export const TOOL_REGISTRY: readonly ToolDefinition[] = [
+  { name: 'arc42-document', handler: arc42DocumentHandler, inputSchema: arc42DocumentInputSchema, description: arc42DocumentDescription },
+  { name: 'arc42-validate', handler: arc42ValidateHandler, inputSchema: arc42ValidateInputSchema, description: arc42ValidateDescription },
+  { name: 'arc42-inventory', handler: arc42InventoryHandler, inputSchema: arc42InventoryInputSchema, description: arc42InventoryDescription },
+  { name: 'arc42-recover', handler: arc42RecoverHandler, inputSchema: arc42RecoverInputSchema, description: arc42RecoverDescription },
   {
     name: 'arc42-workflow-guide',
     description: arc42WorkflowGuideDescription,

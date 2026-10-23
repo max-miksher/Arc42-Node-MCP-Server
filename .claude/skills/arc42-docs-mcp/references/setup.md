@@ -1,119 +1,40 @@
-# Arc42 MCP Server Setup
+# Подключение сервера
 
-## Installation
+Нужны Git и Node.js 24+. Пакет форка не опубликован в npm; upstream-пакет не
+содержит этих расширений. Установи из существующей ветки форка:
 
 ```bash
-npm install -g @h2nguyen/arc42-node-mcp-server
+git clone --recurse-submodules https://github.com/max-miksher/Arc42-Node-MCP-Server.git
+cd Arc42-Node-MCP-Server
+git switch feat/profile-workspace
+npm ci
+npm run build
 ```
 
-Or run directly without installing:
-```bash
-npx -y @h2nguyen/arc42-node-mcp-server /path/to/project
-```
-
-**Requires:** Node.js >= 24.0.0
-
----
-
-## Configuration
-
-### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+Настрой MCP-клиент:
 
 ```json
 {
   "mcpServers": {
-    "arc42-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@h2nguyen/arc42-node-mcp-server", "/path/to/your/project"]
+    "arc42": {
+      "command": "/absolute/path/to/node",
+      "args": ["/absolute/path/to/Arc42-Node-MCP-Server/dist/index.js", "/absolute/path/to/project"]
     }
   }
 }
 ```
 
-### Claude Code
+Для Windows используй абсолютные Windows-пути с экранированием обратной косой черты.
+При WSL Node и оба пути должны быть из одной WSL-среды. targetFolder переопределяет
+проект для отдельного вызова и должен быть абсолютным. Укажи реальные пути без symlink.
 
-Add to `.mcp.json` in your project root (project-scoped) or `~/.claude.json` (global):
+После подключения tools/list должен вернуть шесть upstream-инструментов и
+arc42-document, arc42-validate, arc42-inventory, arc42-recover. Перезапусти сервер
+после новой сборки. stdout предназначен только для MCP JSON-RPC.
 
-```json
-{
-  "mcpServers": {
-    "arc42-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@h2nguyen/arc42-node-mcp-server", "."]
-    }
-  }
-}
-```
-
-With a global installation:
-```json
-{
-  "mcpServers": {
-    "arc42-mcp-server": {
-      "command": "arc42-mcp",
-      "args": ["."]
-    }
-  }
-}
-```
-
-### Cursor
-
-```json
-{
-  "mcpServers": {
-    "arc42-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@h2nguyen/arc42-node-mcp-server", "${workspaceFolder}"]
-    }
-  }
-}
-```
-
-### Cline
-
-```json
-{
-  "mcpServers": {
-    "arc42-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@h2nguyen/arc42-node-mcp-server", "${workspaceFolder}"]
-    }
-  }
-}
-```
-
-### Troubleshooting: NVM Users
-
-If you use NVM (Node Version Manager), the `npx` command may not be found because MCP clients don't always inherit your shell's PATH. Use the full path to your Node.js binary:
-
-```json
-{
-  "mcpServers": {
-    "arc42-mcp-server": {
-      "command": "/Users/<username>/.nvm/versions/node/v24.x.x/bin/npx",
-      "args": ["-y", "@h2nguyen/arc42-node-mcp-server", "/path/to/project"]
-    }
-  }
-}
-```
-
-Find your NVM path with: `which npx`
-
----
-
-## Workspace Configuration
-
-The server needs a workspace path where it creates the `arc42-docs/` directory. There are three ways to provide it:
-
-| Method | When Used | Example |
-|--------|-----------|---------|
-| **Startup argument** | Passed as the last CLI argument at server start | `arc42-mcp /path/to/project` |
-| **`targetFolder` parameter** | Per-tool override on individual calls | `{ "targetFolder": "/other/project" }` |
-| **Fallback** | When neither above is provided | Current working directory |
-
-**Priority:** `targetFolder` parameter > startup argument > current working directory
-
-Use the `targetFolder` parameter when working with multiple projects simultaneously.
+Skill не подключает сервер автоматически. Копируй весь каталог arc42-docs-mcp
+с references в .claude/skills/ или .agents/skills/ своего проекта; обновляй копию
+вместе с сервером. Для нового проекта используй arc42-init с profile: product.
+Новые validation/document/recover работают с .arc42.yaml. Legacy inventory доступен
+до инициализации. Прежние upstream-workspace продолжают работать с шестью исходными
+инструментами; их файлы автоматически не преобразуются.

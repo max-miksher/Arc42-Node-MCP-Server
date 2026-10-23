@@ -36,23 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 ## Requirements Overview
 
-**Purpose**: Describe the relevant requirements and driving forces that architects and development teams must consider.
-
-### Key Requirements
-
-<!-- List the top 3-5 functional requirements -->
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| REQ-1 | [Brief description] | High |
-| REQ-2 | [Brief description] | Medium |
-
-### Features
-
-<!-- Essential features of the system -->
-
-- Feature 1: [Description]
-- Feature 2: [Description]
+Summarize architecturally relevant drivers and link to externally maintained requirements. Do not create or maintain requirements here.
 
 ## Quality Goals
 
@@ -620,73 +604,12 @@ function getConceptsTemplate(): string {
 function getArchitectureDecisionsTemplate(): string {
   return `# 9. Architecture Decisions
 
-**Purpose**: Document important, expensive, critical, or risky architecture decisions including rationale.
+Overview of architecturally significant decisions and their rationale. Link to separately maintained ADRs; do not duplicate their content or manage their format or lifecycle.
 
-## ADR Format
+| Decision | Architectural impact / rationale | External ADR |
+|---|---|---|
 
-Each decision follows this structure:
-- **Context**: What is the issue we're trying to address?
-- **Decision**: What we decided to do
-- **Consequences**: What becomes easier or harder as a result
-
-## Decision Log
-
-### ADR-001: [Decision Title]
-
-**Date**: [YYYY-MM-DD]
-**Status**: [Proposed | Accepted | Deprecated | Superseded]
-**Deciders**: [Names]
-
-**Context**:
-
-[Describe the forces at play, technical, political, social, and local to the project. These forces are probably in tension and should be called out as such.]
-
-**Decision**:
-
-[Describe our response to these forces. This is where we make our decision.]
-
-**Consequences**:
-
-Positive:
-- [Benefit 1]
-- [Benefit 2]
-
-Negative:
-- [Trade-off 1]
-- [Trade-off 2]
-
-Risks:
-- [Risk 1 and mitigation]
-
-### ADR-002: [Another Decision]
-
-[Similar structure]
-
-## Decision Categories
-
-### Structural Decisions
-
-| Decision | Rationale | Date |
-|----------|-----------|------|
-| [Microservices vs Monolith] | [Why chosen] | [Date] |
-
-### Technology Decisions
-
-| Component | Technology | Alternative Considered | Why Chosen |
-|-----------|------------|----------------------|-----------|
-| [Backend] | [Node.js] | [Python, Java] | [Reasons] |
-
-### Process Decisions
-
-| Decision | Impact | Date |
-|----------|--------|------|
-| [Agile methodology] | [How it affects architecture] | [Date] |
-
-## Deprecated Decisions
-
-| Decision | Date Deprecated | Reason | Superseded By |
-|----------|----------------|--------|---------------|
-| [Old decision] | [Date] | [Why deprecated] | [ADR-XXX] |
+Add a link to the existing ADR when available.
 `;
 }
 

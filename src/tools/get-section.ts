@@ -1,4 +1,6 @@
 import { z } from 'zod';
+// Modified in this fork: resolve configured multi-file section paths.
+import { loadProduct, productSection } from '../product-workspace.js';
 import { ToolContext, ToolResponse, Arc42Section, ARC42_SECTIONS, SECTION_METADATA, resolveWorkspaceRoot, getErrorMessage, countWords } from '../types.js';
 import {
   templateProvider,
@@ -23,7 +25,7 @@ This tool retrieves the current content of any of the 12 arc42 sections, plus me
 
 Use this tool:
 - BEFORE updating a section with update-section, to review and build upon existing content
-- Before appending ADRs to section 09_architecture_decisions, to determine the next ADR number
+- Before adding architecture decision overview entries and links to separately maintained ADRs in section 9
 - When reviewing existing documentation
 
 This tool is read-only. You can optionally specify a targetFolder to read documentation from a specific directory instead of the default workspace.`;
@@ -52,6 +54,13 @@ export async function getSectionHandler(
   args: Record<string, unknown>,
   context: ToolContext
 ): Promise<ToolResponse> {
+  try {
+    const workspace = loadProduct(context, args.targetFolder);
+    if (workspace) {
+      const document = productSection(workspace, args.section);
+      return { success: true, message: 'Product section read', data: { ...document, section: args.section, format: 'markdown', language: workspace.config.language, metadata: { ...document.metadata, path: document.path } } };
+    }
+  } catch (error) { return { success: false, message: getErrorMessage(error) }; }
   const section = args.section as string | undefined;
   const targetFolder = args.targetFolder as string | undefined;
 

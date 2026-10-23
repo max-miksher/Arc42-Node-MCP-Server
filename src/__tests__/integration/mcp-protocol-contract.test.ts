@@ -4,7 +4,8 @@
  * Spawns the BUILT server (dist/index.js) and drives it over stdio JSON-RPC,
  * asserting the contracts documented in .claude/skills/arc42-docs-mcp/SKILL.md:
  *
- * 1. tools/list exposes exactly the 6 tools with format alias enums and defaults
+ * Modified in this fork: preserve upstream tools and test the product profile.
+ * 1. tools/list exposes the 6 upstream tools plus product tools
  * 2. The "Starting Fresh" workflow works end-to-end with targetFolder
  * 3. Error paths return actionable recovery guidance
  *
@@ -13,7 +14,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, type ChildProcess } from 'child_process';
-import { existsSync, readdirSync, rmSync } from 'fs';
+import { existsSync, readdirSync, rmSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ToolResponse } from '../../types.js';
@@ -141,17 +142,19 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
   });
 
   describe('tools/list schema contract', () => {
-    it('should expose exactly the 6 documented tools', async () => {
+    it('should preserve the 6 upstream tools and expose additive product tools', async () => {
       const tools = await client.listTools();
       const names = tools.map(t => t.name).sort();
-      expect(names).toEqual([
+      expect(names).toEqual(expect.arrayContaining([
         'arc42-init',
         'arc42-status',
         'arc42-workflow-guide',
         'generate-template',
         'get-section',
         'update-section'
-      ]);
+      ]));
+      expect(names).toContain('arc42-document');
+      expect(names).toEqual(expect.arrayContaining(['arc42-validate', 'arc42-inventory', 'arc42-recover']));
     });
 
     it('should accept format aliases md/adoc in every format-bearing tool', async () => {
@@ -165,10 +168,12 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
 
     it('should declare asciidoc as the default format', async () => {
       const tools = await client.listTools();
-      for (const name of ['arc42-workflow-guide', 'arc42-init', 'generate-template']) {
+      for (const name of ['arc42-workflow-guide', 'generate-template']) {
         const tool = tools.find(t => t.name === name)!;
         expect(tool.inputSchema?.properties?.format?.default, `${name} format default`).toBe('asciidoc');
       }
+      // Init has a conditional runtime default: upstream=AsciiDoc, product=Markdown.
+      expect(tools.find(t => t.name === 'arc42-init')!.inputSchema?.properties?.format?.default).toBeUndefined();
     });
 
     it('should declare replace as the default update-section mode', async () => {
@@ -178,7 +183,7 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
       expect(updateSection.inputSchema?.properties?.mode?.enum).toEqual(['replace', 'append']);
     });
 
-    it('should warn about append mode for ADRs in the update-section description', async () => {
+    it('should warn about replace and describe append mode in the update-section description', async () => {
       const tools = await client.listTools();
       const updateSection = tools.find(t => t.name === 'update-section')!;
       expect(updateSection.description).toContain('append');
@@ -253,7 +258,7 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
     it('step 5: update-section applies the replace default when mode is omitted', async () => {
       const { isError, payload } = await client.callTool('update-section', {
         section: '09_architecture_decisions',
-        content: '== Architecture Decisions\n\n=== ADR-001: Use PostgreSQL\n\n*Status:* Accepted',
+        content: '== Architecture Decisions\n\n=== Storage decision overview\n\n*Status:* Accepted',
         targetFolder: target.path
       });
       expect(isError).toBe(false);
@@ -263,10 +268,10 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
       expect(payload!.data.path).toBeTruthy();
     });
 
-    it('step 5b: append mode preserves existing ADRs (ADR flow)', async () => {
+    it('step 5b: append mode preserves existing decision overview entries', async () => {
       const { isError, payload } = await client.callTool('update-section', {
         section: '09_architecture_decisions',
-        content: '=== ADR-002: Use Redis for caching\n\n*Status:* Accepted',
+        content: '=== Cache decision overview\n\n*Status:* Accepted',
         mode: 'append',
         targetFolder: target.path
       });
@@ -274,14 +279,14 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
       expect(payload!.data.mode).toBe('append');
     });
 
-    it('step 6: get-section returns both ADRs with file metadata', async () => {
+    it('step 6: get-section returns both decision overviews with file metadata', async () => {
       const { isError, payload } = await client.callTool('get-section', {
         section: '09_architecture_decisions',
         targetFolder: target.path
       });
       expect(isError).toBe(false);
-      expect(payload!.data.content).toContain('ADR-001');
-      expect(payload!.data.content).toContain('ADR-002');
+      expect(payload!.data.content).toContain('Storage decision overview');
+      expect(payload!.data.content).toContain('Cache decision overview');
       const metadata = payload!.data.metadata;
       expect(metadata.path).toBeTruthy();
       expect(metadata.lastModified).toBeTruthy();
@@ -333,5 +338,50 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
         (result.isError && /validation/i.test(result.rawText ?? ''));
       expect(rejected).toBe(true);
     });
+  });
+
+  it('supports a product workspace through the built stdio server with safe patching and arc42-only validation', async () => {
+    const product = createTempDir('arc42-product-protocol');
+    try {
+      const initialized = await client.callTool('arc42-init', {
+        projectName: 'Product protocol', profile: 'product', language: 'RU',
+        targetFolder: product.path
+      });
+      expect(initialized.isError).toBe(false);
+      expect(initialized.payload!.data.format).toBe('markdown');
+      const get = await client.callTool('get-section', { section: '05_building_block_view', targetFolder: product.path });
+      expect(get.isError).toBe(false);
+      const oldText = get.payload!.data.content;
+      const edit = await client.callTool('arc42-document', {
+        action: 'edit', path: 'architecture/05-building-block-view/README.md',
+        expectedHash: get.payload!.data.sha256, oldText,
+        newText: oldText + '\nImplementation remains to be verified.\n', targetFolder: product.path
+      });
+      expect(edit.isError).toBe(false);
+      const stale = await client.callTool('arc42-document', {
+        action: 'edit', path: 'architecture/05-building-block-view/README.md',
+        expectedHash: get.payload!.data.sha256, oldText, newText: oldText, targetFolder: product.path
+      });
+      expect(stale.isError).toBe(true);
+      expect(stale.payload!.message).toContain('Version conflict');
+      const validated = await client.callTool('arc42-validate', { targetFolder: product.path });
+      expect(validated.isError).toBe(false);
+      expect(validated.payload!.data.valid).toBe(true);
+      const inventory = await client.callTool('arc42-inventory', { targetFolder: product.path });
+      expect(inventory.isError).toBe(false);
+      expect(inventory.payload!.data.files.length).toBeGreaterThanOrEqual(3);
+      expect(inventory.payload!.data.truncated).toBe(false);
+      const legacy = '# Architecture\n\nAPI calls storage.';
+      writeFileSync(join(product.path, 'legacy.md'), legacy);
+      const recovered = await client.callTool('arc42-recover', { source: 'legacy.md', section: '03_context_and_scope', maxChars: 8, targetFolder: product.path });
+      expect(recovered.isError).toBe(false);
+      expect(recovered.payload!.data.excerpt).toBe(legacy.slice(0, 8));
+      expect(recovered.payload!.data.truncated).toBe(true);
+      expect(readFileSync(join(product.path, 'legacy.md'), 'utf8')).toBe(legacy);
+      const forbidden = await client.callTool('arc42-document', { action: 'create', path: 'plans/task.md', content: '# Plan', targetFolder: product.path });
+      expect(forbidden.isError).toBe(true);
+      const wrongArgs = await client.callTool('arc42-document', { action: 'edit', path: 'x.md', expectedHash: 'wrong', targetFolder: product.path });
+      expect(wrongArgs.isError || wrongArgs.protocolError).toBeTruthy();
+    } finally { product.cleanup(); }
   });
 });

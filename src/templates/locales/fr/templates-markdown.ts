@@ -36,23 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 ## Aperçu des spécifications
 
-**Objectif**: Décrit les spécifications importantes et les facteurs déterminants que les architectes logiciels et l'équipe de développement doivent prendre en compte.
-
-### Spécifications essentielles
-
-<!-- Listez les 3 à 5 principales exigences fonctionnelles -->
-
-| ID | Exigence | Priorité |
-|----|----------|----------|
-| EXI-1 | [Brève description] | Haute |
-| EXI-2 | [Brève description] | Moyenne |
-
-### Fonctionnalités
-
-<!-- Fonctionnalités essentielles du système -->
-
-- Fonctionnalité 1 : [Description]
-- Fonctionnalité 2 : [Description]
+Résumer les facteurs importants pour l’architecture et référencer les exigences externes. Ne pas créer ni gérer les exigences ici.
 
 ## Objectifs de Qualité
 
@@ -620,73 +604,12 @@ function getConceptsTemplate(): string {
 function getArchitectureDecisionsTemplate(): string {
   return `# 9. Décisions d'Architecture
 
-**Objectif**: Documente les décisions d'architecture importantes, coûteuses, critiques ou risquées avec leur justification.
+Vue des décisions architecturales importantes et de leurs raisons. Référencer les ADR séparés sans gérer leur contenu, format ou cycle de vie.
 
-## Format ADR
+| Décision | Impact architectural / justification | ADR externe |
+|---|---|---|
 
-Chaque décision suit cette structure :
-- **Contexte** : Quel est le problème que nous adressons ?
-- **Décision** : Ce que nous avons décidé de faire
-- **Conséquences** : Ce qui devient plus facile ou plus difficile
-
-## Journal des Décisions
-
-### ADR-001 : [Titre de la Décision]
-
-**Date** : [AAAA-MM-JJ]
-**Statut** : [Proposé | Accepté | Obsolète | Remplacé]
-**Décideurs** : [Noms]
-
-**Contexte** :
-
-[Décrivez les forces en présence, techniques, politiques, sociales et spécifiques au projet. Ces forces sont probablement en tension et doivent être nommées comme telles.]
-
-**Décision** :
-
-[Décrivez notre réponse à ces forces. C'est ici que nous prenons notre décision.]
-
-**Conséquences** :
-
-Positives :
-- [Avantage 1]
-- [Avantage 2]
-
-Négatives :
-- [Compromis 1]
-- [Compromis 2]
-
-Risques :
-- [Risque 1 et atténuation]
-
-### ADR-002 : [Autre Décision]
-
-[Structure similaire]
-
-## Catégories de Décisions
-
-### Décisions Structurelles
-
-| Décision | Justification | Date |
-|----------|---------------|------|
-| [Microservices vs Monolithe] | [Pourquoi choisi] | [Date] |
-
-### Décisions Technologiques
-
-| Composant | Technologie | Alternatives Considérées | Pourquoi Choisi |
-|-----------|-------------|--------------------------|-----------------|
-| [Backend] | [Node.js] | [Python, Java] | [Raisons] |
-
-### Décisions de Processus
-
-| Décision | Impact | Date |
-|----------|--------|------|
-| [Méthodologie Agile] | [Comment cela influence l'architecture] | [Date] |
-
-## Décisions Obsolètes
-
-| Décision | Date d'Obsolescence | Raison | Remplacé Par |
-|----------|---------------------|--------|--------------|
-| [Ancienne décision] | [Date] | [Pourquoi obsolète] | [ADR-XXX] |
+Ajouter un lien vers un ADR existant si disponible.
 `;
 }
 

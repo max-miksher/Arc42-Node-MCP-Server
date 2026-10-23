@@ -1,7 +1,7 @@
 {
-  "name": "@h2nguyen/arc42-node-mcp-server",
-  "version": "2.3.1",
-  "description": "MCP server for arc42 architecture documentation - AI-assisted architecture documentation following arc42 template",
+  "name": "@max-miksher/arc42-node-mcp-server",
+  "version": "2.4.0-profile.1",
+  "description": "Arc42 MCP Server fork with configurable arc42 documentation, safe edits, validation and read-only legacy recovery",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
@@ -13,7 +13,14 @@
     "LICENSE",
     "LICENSE-ARC42",
     "NOTICE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    ".claude/skills/arc42-docs-mcp/**/*",
+    "docs/how-to/**/*",
+    "docs/reference/**/*",
+    "docs/reports/**/*",
+    "CONTRIBUTING.md",
+    "docs/mcp-inspector-testing.md",
+    "docs/mcp-inspector-screenshot.png"
   ],
   "scripts": {
     "build": "npm run clean && tsc && chmod +x dist/index.js",
@@ -27,7 +34,8 @@
     "submodule:init": "git submodule update --init --recursive",
     "submodule:update": "git submodule update --remote vendor/arc42-template",
     "show:arc42-version": "tsx scripts/show-arc42-version.ts",
-    "update:arc42": "npm run submodule:update && npm run show:arc42-version"
+    "update:arc42": "npm run submodule:update && npm run show:arc42-version",
+    "pretest:coverage": "npm run build"
   },
   "keywords": [
     "arc42",
@@ -53,28 +61,34 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/h2nguyen/Arc42-Node-MCP-Server.git"
+    "url": "https://github.com/max-miksher/Arc42-Node-MCP-Server.git"
   },
   "bugs": {
-    "url": "https://github.com/h2nguyen/Arc42-Node-MCP-Server/issues"
+    "url": "https://github.com/max-miksher/Arc42-Node-MCP-Server/issues"
   },
-  "homepage": "https://github.com/h2nguyen/Arc42-Node-MCP-Server#readme",
+  "homepage": "https://github.com/max-miksher/Arc42-Node-MCP-Server#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.24.3",
-    "chokidar": "^3.5.3",
-    "gray-matter": "^4.0.3",
-    "yaml": "^2.3.4",
-    "zod": "^3.25.36"
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "entities": "^7.0.1",
+    "marked": "^18.1.1",
+    "yaml": "^2.8.4",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.18.1",
-    "@vitest/coverage-v8": "^4.0.15",
+    "@vitest/coverage-v8": "^4.1.10",
     "rimraf": "^6.0.1",
     "tsx": "^4.7.0",
     "typescript": "^5.7.2",
-    "vitest": "^4.0.15"
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=24.0.0"
-  }
+  },
+  "private": true,
+  "contributors": [
+    {
+      "name": "Bondar Maksim"
+    }
+  ]
 }

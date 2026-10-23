@@ -36,25 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 == Requirements Overview
 
-*Purpose*: Describe the relevant requirements and driving forces that architects and development teams must consider.
-
-=== Key Requirements
-
-// List the top 3-5 functional requirements
-
-[options="header",cols="1,3,1"]
-|===
-|ID |Requirement |Priority
-|REQ-1 |[Brief description] |High
-|REQ-2 |[Brief description] |Medium
-|===
-
-=== Features
-
-// Essential features of the system
-
-* Feature 1: [Description]
-* Feature 2: [Description]
+Summarize architecturally relevant drivers and link to externally maintained requirements. Do not create or maintain requirements here.
 
 == Quality Goals
 
@@ -137,19 +119,7 @@ function getContextAndScopeTemplate(): string {
 
 // Add a context diagram here (PlantUML, Mermaid, or image)
 
-[plantuml, business-context, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
-
-Person(user, "User", "System user")
-System(system, "Your System", "Description")
-System_Ext(external, "External System", "Description")
-
-Rel(user, system, "Uses")
-Rel(system, external, "Calls")
-@enduml
-----
+// Diagram: describe architectural elements and their relationships in a notation chosen by the project.
 
 [options="header",cols="1,2,2"]
 |===
@@ -226,19 +196,7 @@ function getBuildingBlockViewTemplate(): string {
 
 // Add a component diagram here
 
-[plantuml, building-blocks-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
-
-Container(web, "Web Application", "React", "User interface")
-Container(api, "API Server", "Node.js", "Business logic")
-ContainerDb(db, "Database", "PostgreSQL", "Data storage")
-
-Rel(web, api, "Calls", "REST/JSON")
-Rel(api, db, "Reads/Writes", "SQL")
-@enduml
-----
+// Diagram: describe architectural elements and their relationships in a notation chosen by the project.
 
 === Contained Building Blocks
 
@@ -327,24 +285,7 @@ function getDeploymentViewTemplate(): string {
 
 *Purpose*: Overview of the deployment infrastructure.
 
-[plantuml, deployment-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
-
-Deployment_Node(cloud, "Cloud Provider", "AWS/Azure/GCP") {
-    Deployment_Node(web_tier, "Web Tier") {
-        Container(web, "Web Server", "nginx", "Static files + reverse proxy")
-    }
-    Deployment_Node(app_tier, "Application Tier") {
-        Container(api, "API Server", "Node.js", "Business logic")
-    }
-    Deployment_Node(data_tier, "Data Tier") {
-        ContainerDb(db, "Database", "PostgreSQL", "Primary storage")
-    }
-}
-@enduml
-----
+// Diagram: describe architectural elements and their relationships in a notation chosen by the project.
 
 === Motivation
 
@@ -445,51 +386,14 @@ See link:https://docs.arc42.org/section-8/[Cross-cutting Concepts] in the arc42 
 function getArchitectureDecisionsTemplate(): string {
   return `= 9. Architecture Decisions
 
-*Purpose*: Document important, expensive, large-scale, or risky architecture decisions.
-
-== ADR-001: [Decision Title]
-
-=== Status
-
-[Proposed | Accepted | Deprecated | Superseded]
-
-=== Context
-
-[Describe the issue motivating this decision]
-
-=== Decision
-
-[Describe the decision that was made]
-
-=== Consequences
-
-*Positive:*
-
-* [Benefit 1]
-* [Benefit 2]
-
-*Negative:*
-
-* [Drawback 1]
-* [Drawback 2]
-
-=== Alternatives Considered
+Overview of architecturally significant decisions and their rationale. Link to separately maintained ADRs; do not duplicate their content or manage their format or lifecycle.
 
 [options="header",cols="1,2,2"]
 |===
-|Alternative |Pros |Cons
-|[Option A] |[Benefits] |[Drawbacks]
-|[Option B] |[Benefits] |[Drawbacks]
+|Decision |Architectural impact / rationale |External ADR
 |===
 
-'''
-
-== ADR-002: [Decision Title]
-
-// Use the same template for additional decisions
-
-.Further Information
-See link:https://docs.arc42.org/section-9/[Architecture Decisions] in the arc42 documentation.
+Add a link to the existing ADR when available.
 `;
 }
 

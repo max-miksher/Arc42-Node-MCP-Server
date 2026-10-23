@@ -1,4 +1,6 @@
 import { z } from 'zod';
+// Modified in this fork: product sections require a version precondition.
+import { loadProduct, productSection, writeDocument, readDocument } from '../product-workspace.js';
 import { ToolContext, ToolResponse, Arc42Section, ARC42_SECTIONS, SECTION_METADATA, resolveWorkspaceRoot, getErrorMessage, countWords } from '../types.js';
 import {
   type OutputFormatCode,
@@ -14,9 +16,10 @@ import { parse as parseYaml } from 'yaml';
 const sectionValues = ARC42_SECTIONS as unknown as [Arc42Section, ...Arc42Section[]];
 
 export const updateSectionInputSchema = {
+  expectedHash: z.string().regex(/^[a-f0-9]{64}$/).optional().describe('Required in product profile: SHA-256 from get-section. Prefer arc42-document edit for a targeted change.'),
   section: z.enum(sectionValues).describe('The section to update (e.g., "01_introduction_and_goals")'),
   content: z.string().describe('The content to write to the section, in the workspace\'s configured format (asciidoc or markdown — check with arc42-status)'),
-  mode: z.enum(['replace', 'append']).optional().default('replace').describe('Write mode: "replace" OVERWRITES the entire section file; "append" adds the content after the existing content. Use "append" when adding ADRs (section 09) or other incremental entries so existing content is preserved. Defaults to "replace".'),
+  mode: z.enum(['replace', 'append']).optional().default('replace').describe('Write mode: "replace" OVERWRITES the entire section file; "append" adds the content after the existing content. Use "append" for incremental arc42 overview entries so existing content is preserved. Defaults to "replace".'),
   targetFolder: z.string().optional().describe('Optional: Absolute path to the target folder containing arc42-docs. If not provided, uses the default workspace configured at server startup.')
 };
 
@@ -28,7 +31,7 @@ Write modes:
 - "replace" (default): OVERWRITES the entire section file with the new content
 - "append": adds the content after the existing content
 
-IMPORTANT: use mode "append" when adding ADRs to section 09_architecture_decisions or when adding incremental entries, so existing content is preserved. Call get-section first to review existing content (e.g., to determine the next ADR number).
+Use mode "append" for incremental arc42 entries so existing content is preserved. Call get-section first. In product workspaces expectedHash is required and content must retain YAML frontmatter. Section 9 contains a decisions overview and links; external ADR files, requirements and other methodology artifacts are independently managed.
 
 Recommended flow: generate-template (structure) -> get-section (existing content) -> update-section.
 
@@ -80,6 +83,19 @@ export async function updateSectionHandler(
   args: Record<string, unknown>,
   context: ToolContext
 ): Promise<ToolResponse> {
+  try {
+    const workspace = loadProduct(context, args.targetFolder);
+    if (workspace) {
+      if (typeof args.expectedHash !== 'string') throw new Error('Product profile requires expectedHash from get-section. Prefer arc42-document edit.');
+      if (typeof args.content !== 'string' || !args.content) throw new Error('content is required');
+      const current = productSection(workspace, args.section);
+      if (args.mode && !['append', 'replace'].includes(String(args.mode))) throw new Error('Invalid write mode');
+      const content = args.mode === 'append' ? current.content + '\n\n' + args.content : args.content;
+      const path = workspace.config.sections[args.section as Arc42Section];
+      writeDocument(workspace, path, content, args.expectedHash);
+      return { success: true, message: 'Product section written', data: readDocument(workspace, path) };
+    }
+  } catch (error) { return { success: false, message: getErrorMessage(error) }; }
   const section = args.section as string | undefined;
   const content = args.content as string | undefined;
   const mode = (args.mode as string) || 'replace';

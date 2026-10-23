@@ -1,4 +1,6 @@
 import { z } from 'zod';
+// Modified in this fork: product status reports coverage without word-count completeness.
+import { loadProduct, productStatus } from '../product-workspace.js';
 import { ToolContext, ToolResponse, ARC42_SECTIONS, SECTION_METADATA, resolveWorkspaceRoot, getErrorMessage, countWords } from '../types.js';
 import {
   ARC42_REFERENCE,
@@ -21,7 +23,7 @@ export const arc42StatusInputSchema = {
 
 export const arc42StatusDescription = `Check the status of arc42 documentation.
 
-This tool reports which of the 12 sections have content (word counts, completeness 0-100%, last modified), overall progress, and the workspace's configured language and output format.
+In upstream workspaces, reports section word counts, estimated completeness 0-100%, last modified and overall progress. In product workspaces, reports mapped paths, existence, word counts, document status and required flags; no completeness score is claimed. Both modes report configured language and format. File presence and word counts do not establish architectural correctness.
 
 Use this tool:
 - To assess an existing workspace before making changes
@@ -77,6 +79,10 @@ export async function arc42StatusHandler(
   args: Record<string, unknown>,
   context: ToolContext
 ): Promise<ToolResponse> {
+  try {
+    const workspace = loadProduct(context, args.targetFolder);
+    if (workspace) return productStatus(workspace);
+  } catch (error) { return { success: false, message: getErrorMessage(error) }; }
   const targetFolder = args.targetFolder as string | undefined;
 
   // Resolve workspace root - use targetFolder if provided, otherwise use context default

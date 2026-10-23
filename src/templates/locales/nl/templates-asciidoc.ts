@@ -36,25 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 == Requirements Overzicht
 
-*Doel*: Beschrijft de relevante requirements en het krachtenveld waar software architecten en het development team rekening mee moeten houden.
-
-=== Belangrijke Requirements
-
-// Lijst de top 3-5 functionele requirements
-
-[options="header",cols="1,3,1"]
-|===
-|ID |Requirement |Prioriteit
-|REQ-1 |[Korte beschrijving] |Hoog
-|REQ-2 |[Korte beschrijving] |Gemiddeld
-|===
-
-=== Features
-
-// Essentiele features van het systeem
-
-* Feature 1: [Beschrijving]
-* Feature 2: [Beschrijving]
+Vat architectuurrelevante eisen samen en verwijs naar extern beheerde eisen. Maak of beheer hier geen eisen.
 
 == Kwaliteits Doelen
 
@@ -137,19 +119,7 @@ function getContextAndScopeTemplate(): string {
 
 // Voeg hier een context diagram toe (PlantUML, Mermaid, of afbeelding)
 
-[plantuml, business-context, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
-
-Person(user, "Gebruiker", "Systeem gebruiker")
-System(system, "Jouw Systeem", "Beschrijving")
-System_Ext(external, "Extern Systeem", "Beschrijving")
-
-Rel(user, system, "Gebruikt")
-Rel(system, external, "Roept aan")
-@enduml
-----
+// Diagram: beschrijf architectuurelementen en relaties in de door het project gekozen notatie.
 
 [options="header",cols="1,2,2"]
 |===
@@ -226,19 +196,7 @@ function getBuildingBlockViewTemplate(): string {
 
 // Voeg hier een component diagram toe
 
-[plantuml, building-blocks-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
-
-Container(web, "Web Applicatie", "React", "Gebruikersinterface")
-Container(api, "API Server", "Node.js", "Business logica")
-ContainerDb(db, "Database", "PostgreSQL", "Data opslag")
-
-Rel(web, api, "Roept aan", "REST/JSON")
-Rel(api, db, "Leest/Schrijft", "SQL")
-@enduml
-----
+// Diagram: beschrijf architectuurelementen en relaties in de door het project gekozen notatie.
 
 === Ingesloten Bouwstenen
 
@@ -327,24 +285,7 @@ function getDeploymentViewTemplate(): string {
 
 *Doel*: Overzicht van de deployment infrastructuur.
 
-[plantuml, deployment-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
-
-Deployment_Node(cloud, "Cloud Provider", "AWS/Azure/GCP") {
-    Deployment_Node(web_tier, "Web Laag") {
-        Container(web, "Web Server", "nginx", "Statische bestanden + reverse proxy")
-    }
-    Deployment_Node(app_tier, "Applicatie Laag") {
-        Container(api, "API Server", "Node.js", "Business logica")
-    }
-    Deployment_Node(data_tier, "Data Laag") {
-        ContainerDb(db, "Database", "PostgreSQL", "Primaire opslag")
-    }
-}
-@enduml
-----
+// Diagram: beschrijf architectuurelementen en relaties in de door het project gekozen notatie.
 
 === Motivatie
 
@@ -445,51 +386,14 @@ Zie link:https://docs.arc42.org/section-8/[Cross-cutting Concepten] in de arc42 
 function getArchitectureDecisionsTemplate(): string {
   return `= 9. Architectuur Beslissingen
 
-*Doel*: Documenteer belangrijke, kostbare, ver reikende of risicovolle architectuur beslissingen.
-
-== ADR-001: [Beslissing Titel]
-
-=== Status
-
-[Voorgesteld | Geaccepteerd | Verouderd | Vervangen]
-
-=== Context
-
-[Beschrijf het probleem dat deze beslissing motiveert]
-
-=== Beslissing
-
-[Beschrijf de genomen beslissing]
-
-=== Consequenties
-
-*Positief:*
-
-* [Voordeel 1]
-* [Voordeel 2]
-
-*Negatief:*
-
-* [Nadeel 1]
-* [Nadeel 2]
-
-=== Overwogen Alternatieven
+Overzicht van belangrijke architectuurbeslissingen en hun redenen. Verwijs naar afzonderlijke ADRs zonder inhoud, formaat of levenscyclus te beheren.
 
 [options="header",cols="1,2,2"]
 |===
-|Alternatief |Voordelen |Nadelen
-|[Optie A] |[Voordelen] |[Nadelen]
-|[Optie B] |[Voordelen] |[Nadelen]
+|Beslissing |Architectuurimpact / reden |Externe ADR
 |===
 
-'''
-
-== ADR-002: [Beslissing Titel]
-
-// Gebruik hetzelfde template voor aanvullende beslissingen
-
-.Verdere Informatie
-Zie link:https://docs.arc42.org/section-9/[Architectuur Beslissingen] in de arc42 documentatie.
+Voeg indien beschikbaar een link naar de bestaande ADR toe.
 `;
 }
 

@@ -36,25 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 == Prehled pozadavku
 
-*Ucel*: Shrnuje klicove pozadavky a omezeni, se kterymi musi softwarovi architekti i vyvojovy tym pocitat.
-
-=== Klicove pozadavky
-
-// Uvedte 3-5 hlavnich funkcnich pozadavku
-
-[options="header",cols="1,3,1"]
-|===
-|ID |Pozadavek |Priorita
-|REQ-1 |[Strucny popis] |Vysoka
-|REQ-2 |[Strucny popis] |Stredni
-|===
-
-=== Funkce
-
-// Zakladni vlastnosti systemu
-
-* Funkce 1: [Popis]
-* Funkce 2: [Popis]
+Shrňte architektonicky významné požadavky a odkažte na externí požadavky. Požadavky zde nevytvářejte ani nespravujte.
 
 == Kvalitativni cile
 
@@ -137,19 +119,7 @@ function getContextAndScopeTemplate(): string {
 
 // Vlozte kontextovy diagram (PlantUML, Mermaid nebo obrazek)
 
-[plantuml, business-context, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
-
-Person(user, "Uzivatel", "Uzivatel systemu")
-System(system, "Vas system", "Popis")
-System_Ext(external, "Externi system", "Popis")
-
-Rel(user, system, "Pouziva")
-Rel(system, external, "Vola")
-@enduml
-----
+// Diagram: popište architektonické prvky a vztahy v notaci zvolené projektem.
 
 [options="header",cols="1,2,2"]
 |===
@@ -226,19 +196,7 @@ function getBuildingBlockViewTemplate(): string {
 
 // Vlozte diagram komponent
 
-[plantuml, building-blocks-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
-
-Container(web, "Webova aplikace", "React", "Uzivatelske rozhrani")
-Container(api, "API Server", "Node.js", "Obchodni logika")
-ContainerDb(db, "Databaze", "PostgreSQL", "Uloziste dat")
-
-Rel(web, api, "Vola", "REST/JSON")
-Rel(api, db, "Cte/Zapisuje", "SQL")
-@enduml
-----
+// Diagram: popište architektonické prvky a vztahy v notaci zvolené projektem.
 
 === Obsazene stavebni bloky
 
@@ -327,24 +285,7 @@ function getDeploymentViewTemplate(): string {
 
 *Ucel*: Prehled infrastruktury nasazeni.
 
-[plantuml, deployment-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
-
-Deployment_Node(cloud, "Cloudovy poskytovatel", "AWS/Azure/GCP") {
-    Deployment_Node(web_tier, "Webova vrstva") {
-        Container(web, "Webovy server", "nginx", "Staticke soubory + reverzni proxy")
-    }
-    Deployment_Node(app_tier, "Aplikacni vrstva") {
-        Container(api, "API Server", "Node.js", "Obchodni logika")
-    }
-    Deployment_Node(data_tier, "Datova vrstva") {
-        ContainerDb(db, "Databaze", "PostgreSQL", "Primarni uloziste")
-    }
-}
-@enduml
-----
+// Diagram: popište architektonické prvky a vztahy v notaci zvolené projektem.
 
 === Motivace
 
@@ -445,51 +386,14 @@ Viz odkaz:https://docs.arc42.org/section-8/[Prurezove koncepty] v dokumentaci ar
 function getArchitectureDecisionsTemplate(): string {
   return `= 9. Rozhodnuti o architekture
 
-*Ucel*: Dokumentujte dulezita, draha, rozsahla nebo riskantni architektonicka rozhodnuti.
-
-== ADR-001: [Nazev rozhodnuti]
-
-=== Stav
-
-[Navrzeno | Prijato | Zastarale | Nahrazeno]
-
-=== Kontext
-
-[Popiste problem motivujici toto rozhodnuti]
-
-=== Rozhodnuti
-
-[Popiste rozhodnuti, ktere bylo ucineno]
-
-=== Dusledky
-
-*Pozitivni:*
-
-* [Vyhoda 1]
-* [Vyhoda 2]
-
-*Negativni:*
-
-* [Nevyhoda 1]
-* [Nevyhoda 2]
-
-=== Zvazene alternativy
+Přehled významných architektonických rozhodnutí a jejich důvodů. Odkazujte na samostatné ADR bez správy obsahu, formátu nebo životního cyklu.
 
 [options="header",cols="1,2,2"]
 |===
-|Alternativa |Vyhody |Nevyhody
-|[Moznost A] |[Vyhody] |[Nevyhody]
-|[Moznost B] |[Vyhody] |[Nevyhody]
+|Rozhodnutí |Dopad na architekturu / důvod |Externí ADR
 |===
 
-'''
-
-== ADR-002: [Nazev rozhodnuti]
-
-// Pouzijte stejnou sablonu pro dalsi rozhodnuti
-
-.Dalsi informace
-Viz odkaz:https://docs.arc42.org/section-9/[Rozhodnuti o architekture] v dokumentaci arc42.
+Je-li dostupný, přidejte odkaz na existující ADR.
 `;
 }
 

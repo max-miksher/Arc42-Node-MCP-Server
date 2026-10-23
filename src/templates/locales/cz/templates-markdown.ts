@@ -11,14 +11,7 @@ export function getTemplate(section: Arc42Section): string {
 
 ## Přehled požadavků
 
-**Účel**: Popsat relevantní požadavky a hnací síly, které musí architekti a vývojový tým zvážit.
-
-### Klíčové požadavky
-
-| ID | Požadavek | Priorita |
-|----|-----------|----------|
-| REQ-1 | [Stručný popis] | Vysoká |
-| REQ-2 | [Stručný popis] | Střední |
+Shrňte architektonicky významné požadavky a odkažte na externí požadavky. Požadavky zde nevytvářejte ani nespravujte.
 
 ## Cíle kvality
 
@@ -159,24 +152,12 @@ sequenceDiagram
 `,
     '09_architecture_decisions': () => `# 9. Architektonická rozhodnutí
 
-## Formát ADR
+Přehled významných architektonických rozhodnutí a jejich důvodů. Odkazujte na samostatné ADR bez správy obsahu, formátu nebo životního cyklu.
 
-- **Kontext**: Jaký problém řešíme?
-- **Rozhodnutí**: Co jsme se rozhodli udělat
-- **Důsledky**: Co se stane jednodušším nebo těžším
+| Rozhodnutí | Dopad na architekturu / důvod | Externí ADR |
+|---|---|---|
 
-### ADR-001: [Název rozhodnutí]
-
-**Datum**: [RRRR-MM-DD]
-**Status**: [Navrženo | Přijato | Zastaralé]
-
-**Kontext**: [Popis problému]
-
-**Rozhodnutí**: [Co jsme se rozhodli]
-
-**Důsledky**:
-- Pozitivní: [Výhoda 1]
-- Negativní: [Kompromis 1]
+Je-li dostupný, přidejte odkaz na existující ADR.
 `,
     '10_quality_requirements': () => `# 10. Požadavky na kvalitu
 

@@ -36,25 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 == Visão Geral dos Requisitos
 
-*Propósito*: Descreve os requisitos relevantes e as forças motrizes que os arquitetos de software e a equipe de desenvolvimento devem considerar.
-
-=== Requisitos Chave
-
-// Liste os 3-5 principais requisitos funcionais
-
-[options="header",cols="1,3,1"]
-|===
-|ID |Requisito |Prioridade
-|REQ-1 |[Breve descrição] |Alta
-|REQ-2 |[Breve descrição] |Média
-|===
-
-=== Funcionalidades
-
-// Funcionalidades essenciais do sistema
-
-* Funcionalidade 1: [Descrição]
-* Funcionalidade 2: [Descrição]
+Resumir os requisitos relevantes para a arquitetura e referenciar requisitos externos. Não criar nem gerir requisitos aqui.
 
 == Objetivos de Qualidade
 
@@ -137,19 +119,7 @@ function getContextAndScopeTemplate(): string {
 
 // Adicione um diagrama de contexto aqui (PlantUML, Mermaid, ou imagem)
 
-[plantuml, business-context, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
-
-Person(user, "Usuário", "Usuário do sistema")
-System(system, "Seu Sistema", "Descrição")
-System_Ext(external, "Sistema Externo", "Descrição")
-
-Rel(user, system, "Usa")
-Rel(system, external, "Chama")
-@enduml
-----
+// Diagrama: descrever elementos arquiteturais e relações na notação escolhida pelo projeto.
 
 [options="header",cols="1,2,2"]
 |===
@@ -226,19 +196,7 @@ function getBuildingBlockViewTemplate(): string {
 
 // Adicione um diagrama de componentes aqui
 
-[plantuml, building-blocks-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
-
-Container(web, "Aplicação Web", "React", "Interface do usuário")
-Container(api, "Servidor API", "Node.js", "Lógica de negócios")
-ContainerDb(db, "Banco de Dados", "PostgreSQL", "Armazenamento de dados")
-
-Rel(web, api, "Chama", "REST/JSON")
-Rel(api, db, "Lê/Escreve", "SQL")
-@enduml
-----
+// Diagrama: descrever elementos arquiteturais e relações na notação escolhida pelo projeto.
 
 === Blocos de Construção Contidos
 
@@ -327,24 +285,7 @@ function getDeploymentViewTemplate(): string {
 
 *Propósito*: Visão geral da infraestrutura de implantação.
 
-[plantuml, deployment-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
-
-Deployment_Node(cloud, "Provedor de Nuvem", "AWS/Azure/GCP") {
-    Deployment_Node(web_tier, "Camada Web") {
-        Container(web, "Servidor Web", "nginx", "Arquivos estáticos + proxy reverso")
-    }
-    Deployment_Node(app_tier, "Camada de Aplicação") {
-        Container(api, "Servidor API", "Node.js", "Lógica de negócios")
-    }
-    Deployment_Node(data_tier, "Camada de Dados") {
-        ContainerDb(db, "Banco de Dados", "PostgreSQL", "Armazenamento primário")
-    }
-}
-@enduml
-----
+// Diagrama: descrever elementos arquiteturais e relações na notação escolhida pelo projeto.
 
 === Motivação
 
@@ -445,51 +386,14 @@ Consulte link:https://docs.arc42.org/section-8/[Cross-cutting Concepts] na docum
 function getArchitectureDecisionsTemplate(): string {
   return `= 9. Decisões Arquiteturais
 
-*Propósito*: Documente decisões arquiteturais importantes, caras, de grande escala ou arriscadas.
-
-== ADR-001: [Título da Decisão]
-
-=== Status
-
-[Proposta | Aceita | Obsoleta | Substituída]
-
-=== Contexto
-
-[Descreva o problema que motiva esta decisão]
-
-=== Decisão
-
-[Descreva a decisão que foi tomada]
-
-=== Consequências
-
-*Positivas:*
-
-* [Benefício 1]
-* [Benefício 2]
-
-*Negativas:*
-
-* [Desvantagem 1]
-* [Desvantagem 2]
-
-=== Alternativas Consideradas
+Visão das decisões arquiteturais significativas e seus motivos. Referenciar ADRs separados sem gerir conteúdo, formato ou ciclo de vida.
 
 [options="header",cols="1,2,2"]
 |===
-|Alternativa |Prós |Contras
-|[Opção A] |[Benefícios] |[Desvantagens]
-|[Opção B] |[Benefícios] |[Desvantagens]
+|Decisão |Impacto arquitetural / motivo |ADR externo
 |===
 
-'''
-
-== ADR-002: [Título da Decisão]
-
-// Use o mesmo modelo para decisões adicionais
-
-.Mais Informações
-Consulte link:https://docs.arc42.org/section-9/[Architecture Decisions] na documentação do arc42.
+Adicionar um link para o ADR existente quando disponível.
 `;
 }
 

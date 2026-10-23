@@ -36,25 +36,7 @@ function getIntroductionAndGoalsTemplate(): string {
 
 == 需求概述
 
-*目的*：描述软件架构师和开发团队必须考虑的相关需求和驱动因素。
-
-=== 关键需求
-
-// 列出前 3-5 个功能需求
-
-[options="header",cols="1,3,1"]
-|===
-|编号 |需求 |优先级
-|REQ-1 |[简要描述] |高
-|REQ-2 |[简要描述] |中
-|===
-
-=== 特性
-
-// 系统的基本特性
-
-* 特性 1：[描述]
-* 特性 2：[描述]
+概述与架构相关的驱动因素，并链接到独立维护的需求文档。不要在此创建或管理需求。
 
 == 质量目标
 
@@ -137,19 +119,7 @@ function getContextAndScopeTemplate(): string {
 
 // 在此处添加上下文图（PlantUML、Mermaid 或图片）
 
-[plantuml, business-context, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
-
-Person(user, "用户", "系统用户")
-System(system, "您的系统", "描述")
-System_Ext(external, "外部系统", "描述")
-
-Rel(user, system, "使用")
-Rel(system, external, "调用")
-@enduml
-----
+// 架构图：使用项目选择的表示法描述架构元素及其关系。
 
 [options="header",cols="1,2,2"]
 |===
@@ -226,19 +196,7 @@ function getBuildingBlockViewTemplate(): string {
 
 // 在此处添加组件图
 
-[plantuml, building-blocks-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
-
-Container(web, "Web 应用", "React", "用户界面")
-Container(api, "API 服务器", "Node.js", "业务逻辑")
-ContainerDb(db, "数据库", "PostgreSQL", "数据存储")
-
-Rel(web, api, "调用", "REST/JSON")
-Rel(api, db, "读取/写入", "SQL")
-@enduml
-----
+// 架构图：使用项目选择的表示法描述架构元素及其关系。
 
 === 包含的构建块
 
@@ -327,24 +285,7 @@ function getDeploymentViewTemplate(): string {
 
 *目的*：部署基础设施概览。
 
-[plantuml, deployment-l1, svg]
-----
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
-
-Deployment_Node(cloud, "云服务提供商", "AWS/Azure/GCP") {
-    Deployment_Node(web_tier, "Web 层") {
-        Container(web, "Web 服务器", "nginx", "静态文件 + 反向代理")
-    }
-    Deployment_Node(app_tier, "应用层") {
-        Container(api, "API 服务器", "Node.js", "业务逻辑")
-    }
-    Deployment_Node(data_tier, "数据层") {
-        ContainerDb(db, "数据库", "PostgreSQL", "主存储")
-    }
-}
-@enduml
-----
+// 架构图：使用项目选择的表示法描述架构元素及其关系。
 
 === 动机
 
@@ -445,51 +386,14 @@ class 订单 {
 function getArchitectureDecisionsTemplate(): string {
   return `= 9. 架构决策
 
-*目的*：记录重要的、高成本的、大规模的或有风险的架构决策。
-
-== ADR-001：[决策标题]
-
-=== 状态
-
-[提议 | 已接受 | 已弃用 | 已取代]
-
-=== 上下文
-
-[描述促使做出此决策的问题]
-
-=== 决策
-
-[描述做出的决策]
-
-=== 后果
-
-*正面：*
-
-* [好处 1]
-* [好处 2]
-
-*负面：*
-
-* [缺点 1]
-* [缺点 2]
-
-=== 考虑的替代方案
+概述重要架构决策及其理由。链接到独立维护的 ADR，不重复其内容，也不管理其格式或生命周期。
 
 [options="header",cols="1,2,2"]
 |===
-|替代方案 |优点 |缺点
-|[选项 A] |[好处] |[缺点]
-|[选项 B] |[好处] |[缺点]
+|决策 |架构影响 / 理由 |外部 ADR
 |===
 
-'''
-
-== ADR-002：[决策标题]
-
-// 对于其他决策使用相同的模板
-
-.更多信息
-参见 arc42 文档中的 link:https://docs.arc42.org/section-9/[架构决策]。
+如有现成 ADR，请添加链接。
 `;
 }
 

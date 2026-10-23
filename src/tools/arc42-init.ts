@@ -1,4 +1,7 @@
 import { z } from 'zod';
+// Modified in this fork: opt-in product workspace; legacy defaults retained.
+import { initializeProduct, loadProduct, projectRoot, safePath, withProjectLockAsync } from '../product-workspace.js';
+import { ARC42_SECTIONS, type Arc42Section } from '../types.js';
 import { ToolContext, ToolResponse, resolveWorkspaceRoot, getErrorMessage } from '../types.js';
 import {
   ARC42_REFERENCE,
@@ -14,7 +17,7 @@ import {
   type OutputFormatStrategy
 } from '../templates/index.js';
 import { mkdir, writeFile } from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 // Zod schema as the SINGLE SOURCE OF TRUTH for tool input
@@ -22,16 +25,22 @@ const languageValues = SUPPORTED_LANGUAGE_CODES as unknown as [string, ...string
 const formatValues = FORMAT_INPUT_VALUES as unknown as [string, ...string[]];
 
 export const arc42InitInputSchema = {
+  profile: z.enum(['upstream', 'product']).optional().describe('product creates a configurable Markdown docs tree; upstream keeps the original workspace'),
+  docsDir: z.string().optional().describe('Product profile: relative documentation root, default docs'),
+  scaffold: z.enum(['full']).optional().describe('Product profile always creates all 12 arc42 drafts and an index'),
+  sections: z.record(z.enum(ARC42_SECTIONS as unknown as [Arc42Section, ...Arc42Section[]]), z.string()).optional().describe('Product profile: override section-to-Markdown-path mapping, relative to docsDir'),
   projectName: z.string().describe('Name of the project being documented'),
   force: z.boolean().optional().describe('Force re-initialization even if the workspace exists. WARNING: this overwrites ALL existing section files with fresh templates — existing content is lost. Confirm with the user first.'),
   targetFolder: z.string().optional().describe('Optional: Absolute path to the target folder where arc42-docs will be created. If not provided, uses the default workspace configured at server startup.'),
   language: z.enum(languageValues).optional().default('EN').describe('Language code for the documentation templates. Supported: EN (English), DE (German), ES (Spanish), FR (French), IT (Italian), NL (Dutch), PT (Portuguese), RU (Russian), CZ (Czech), UKR (Ukrainian), ZH (Chinese). Defaults to EN. Persisted in config.yaml and applied to all later operations.'),
-  format: z.enum(formatValues).optional().default(DEFAULT_OUTPUT_FORMAT).describe(`Output format for documentation files. Supported: markdown (alias: md), asciidoc (alias: adoc). Defaults to ${DEFAULT_OUTPUT_FORMAT}. Persisted in config.yaml and applied to all later operations.`)
+  format: z.enum(formatValues).optional().describe(`Output format: markdown/md or asciidoc/adoc. Default is ${DEFAULT_OUTPUT_FORMAT} for upstream and markdown for product. Product profile requires Markdown. Persisted in workspace configuration.`)
 };
 
 export const arc42InitDescription = `Initialize the arc42 documentation workspace for a project.
 
-This tool creates the arc42-docs/ directory with all 12 section template files, config.yaml (persisting the chosen language and format), a README, and a main documentation file.
+With profile: product, creates .arc42.yaml, a configurable Markdown docsDir, all 12 section drafts and an arc42 index with mandatory YAML frontmatter. It creates no ADRs, requirements or plans and never overwrites existing documentation.
+
+With the upstream profile, this tool creates the arc42-docs/ directory with all 12 section template files, config.yaml (persisting the chosen language and format), a README, and a main documentation file.
 
 Run this ONCE at the beginning of a documentation effort, after reading arc42-workflow-guide. If the workspace may already exist, check with arc42-status first — use update-section to write content, NOT re-initialization.
 
@@ -46,6 +55,20 @@ export async function arc42InitHandler(
   args: Record<string, unknown>,
   context: ToolContext
 ): Promise<ToolResponse> {
+  try {
+    if (args.profile === 'product') return initializeProduct(args, context);
+    if (typeof args.projectName !== 'string' || !args.projectName.trim()) return { success: false, message: 'Project name is required' };
+    const projectPath = projectRoot(context, args.targetFolder);
+    safePath(projectPath, '.arc42.lock');
+    mkdirSync(projectPath, { recursive: true });
+    return await withProjectLockAsync(projectPath, async () => {
+      if (loadProduct(context, args.targetFolder)) return { success: false, message: 'Product workspace already exists; use arc42-status and arc42-document. Upstream init would create an ambiguous configuration.' };
+      return upstreamInitHandler(args, context);
+    });
+  } catch (error) { return { success: false, message: getErrorMessage(error) }; }
+}
+
+async function upstreamInitHandler(args: Record<string, unknown>, context: ToolContext): Promise<ToolResponse> {
   const projectNameArg = args.projectName;
   const force = (args.force as boolean) ?? false;
   const targetFolder = args.targetFolder as string | undefined;
