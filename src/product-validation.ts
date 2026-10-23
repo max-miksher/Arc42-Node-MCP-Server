@@ -2,9 +2,10 @@
 import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { marked, type Token } from 'marked';
-import { z } from 'zod';
+import { decodeHTML } from 'entities';
+import { isUtf8 } from 'node:buffer';
 import {
-  type ProductWorkspace, safePath, parseDocument, readDocument, sha256, dateSchema,
+  type ProductWorkspace, safePath, parseDocument, readDocument, sha256, sectionForDocument, isArc42Document, documentMetadata,
 } from './product-workspace.js';
 
 export interface Issue { code: string; path: string; message: string; severity: 'error' | 'warning' }
@@ -43,13 +44,16 @@ export function scanDocuments(root: string, roots: string[], limits: ScanLimits 
 function tokens(body: string) { return marked.lexer(body); }
 function anchors(body: string): Set<string> {
   const ids = new Set<string>();
-  const counts = new Map<string, number>();
+  function inlineText(sequence: Token[]): string {
+    return sequence.map(token => 'tokens' in token && token.tokens ? inlineText(token.tokens) : 'text' in token ? String(token.text).replace(/<[^>]*>/g, '') : '').join('');
+  }
   marked.walkTokens(tokens(body), (token: Token) => {
     if (token.type === 'heading') {
-      const slug = token.text.replace(/<[^>]*>/g, '').toLowerCase().replace(/[^\p{L}\p{N}_\-\s]/gu, '').replace(/ /g, '-');
-      const count = counts.get(slug) ?? 0;
-      counts.set(slug, count + 1);
-      ids.add(slug + (count ? '-' + count : ''));
+      const text = decodeHTML(inlineText(token.tokens));
+      const slug = text.toLowerCase().replace(/[^\p{L}\p{M}\p{N}_\-\s]/gu, '').replace(/\s/g, '-');
+      let candidate = slug;
+      for (let suffix = 1; ids.has(candidate); suffix++) candidate = slug + '-' + suffix;
+      ids.add(candidate);
     } else if (token.type === 'html') {
       for (const match of token.raw.matchAll(/\b(?:id|name)=["']([^"']+)["']/g)) ids.add(match[1]);
     }
@@ -91,11 +95,14 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
     } catch (error) { add(code, `${String(target)}: ${String(error)}`); }
   }
 
-  for (const field of ['related', 'requirements', 'blocks'] as const) {
+  if (!isArc42Document(workspace, path, metadata)) add('scope', 'Only arc42 sections, owned subsections and the arc42 index are managed');
+  if (metadata.type !== (path === 'README.md' ? 'index' : 'architecture')) add('document-role', 'arc42 pages require type: architecture; the root index requires type: index');
+  if (metadata.section !== undefined && metadata.section !== sectionForDocument(workspace, path, metadata)) add('section', 'Subsection owner conflicts with its configured section or location');
+  for (const field of ['related', 'blocks'] as const) {
     const value = metadata[field];
     if (value !== undefined) {
-      if (!Array.isArray(value) || !value.length) add('metadata', `${field} must be a non-empty list of paths`);
-      else for (const target of value) ref(target, 'reference', field === 'requirements' ? doc => doc.metadata.type === 'requirement' : undefined);
+      if (!Array.isArray(value) || !value.length) add('metadata', `${field} must be a non-empty list of arc42 paths`);
+      else for (const target of value) ref(target, 'reference');
     }
   }
   if (metadata.superseded_by) {
@@ -119,42 +126,6 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
     }
   }
 
-  const section = Object.entries(workspace.config.sections).find(([, mapped]) => mapped === path)?.[0];
-  if (section && metadata.type !== 'architecture') add('document-role', 'arc42 section must have type: architecture');
-  const expectedTypes: Record<string, string> = { 'notes': 'note', 'plans': 'plan', 'requirements': 'requirement', 'how-to': 'how-to', 'reference': 'reference', 'tutorials': 'tutorial', 'explanation': 'explanation' };
-  const category = path.split('/')[0];
-  if (expectedTypes[category] && metadata.type !== expectedTypes[category] && metadata.type !== 'index') add('document-role', `${category} requires type: ${expectedTypes[category]}`);
-  if (category === 'requirements' && !/^requirements\/\d{4}-\d{2}-\d{2}-[^/]+\/[^/]+\.md$/.test(path)) add('requirement-layout', 'Requirement must be inside YYYY-MM-DD-slug/');
-
-  const decisionsRoot = dirname(workspace.config.sections['09_architecture_decisions']);
-  const adrPrefix = join(decisionsRoot, 'ADR-').split('\\').join('/');
-  if ((path.startsWith(adrPrefix) || metadata.type === 'adr')) {
-    if (metadata.type !== 'adr' || !path.startsWith(adrPrefix) || !/^ADR-\d{4,}-[^/]+\.md$/.test(path.split('/').at(-1)!)) add('madr', 'Separate ADR requires ADR-xxxx-slug.md under section 9 and type: adr');
-    const decision = z.object({ date: dateSchema, decision_status: z.enum(['proposed', 'accepted', 'rejected', 'deprecated', 'superseded']), 'decision-makers': z.array(z.string().min(1)).min(1).optional() }).safeParse(metadata);
-    if (!decision.success) add('madr', 'ADR adapter requires date and decision_status; document status remains draft/active/deprecated/superseded');
-    const headings = sequence.flatMap(token => token.type === 'heading' ? [token.text] : []);
-    for (const heading of ['Context and Problem Statement', 'Considered Options', 'Decision Outcome']) {
-      if (!headings.includes(heading)) add('madr', 'Missing MADR minimal heading: ' + heading);
-      else {
-        const start = sequence.findIndex(token => token.type === 'heading' && token.text === heading);
-        const after = sequence.slice(start + 1);
-        const boundary = after.findIndex(token => token.type === 'heading');
-        const sectionTokens = boundary < 0 ? after : after.slice(0, boundary);
-        if (!sectionTokens.some(token => token.type !== 'space' && token.type !== 'html' && token.raw.trim())) add('madr', 'Empty MADR section: ' + heading);
-      }
-    }
-    const number = /^ADR-(\d+)-/.exec(path.split('/').at(-1)!)?.[1];
-    const directory = safePath(workspace.root, decisionsRoot === '.' ? path : decisionsRoot);
-    const parentDirectory = decisionsRoot === '.' ? dirname(directory) : directory;
-    if (number && existsSync(parentDirectory)) {
-      for (const sibling of readdirSync(parentDirectory)) {
-        const siblingPath = join(decisionsRoot, sibling).split('\\').join('/');
-        if (siblingPath !== path && Number(/^ADR-(\d+)-/.exec(sibling)?.[1]) === Number(number)) add('adr-number', 'Duplicate ADR number: ' + siblingPath);
-      }
-    }
-    if (decision.success && ['deprecated', 'superseded'].includes(decision.data.decision_status) && metadata.status === 'active') add('madr', 'Inactive decision cannot have active document status');
-  }
-
   const blocksRoot = dirname(workspace.config.sections['05_building_block_view']);
   const blockRelative = relative(blocksRoot, path).split('\\').join('/');
   const isBlock = /^(?:building-blocks\/[^/]+\/)+README\.md$/.test(blockRelative);
@@ -164,12 +135,7 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
     const expectedParent = segments.length === 3 ? workspace.config.sections['05_building_block_view'] : join(blocksRoot, ...segments.slice(0, -3), 'README.md').split('\\').join('/');
     if (metadata.parent !== expectedParent) add('building-block', 'Expected parent: ' + expectedParent);
     ref(metadata.parent, 'building-block', (doc, target) => target === workspace.config.sections['05_building_block_view'] || doc.metadata.kind === 'building-block');
-    if (segments.filter(segment => segment === 'building-blocks').length > 1) {
-      const decomposition = z.object({ trigger: z.number().int().min(1).max(5), evidence: z.array(z.string().min(1)).min(1) }).safeParse(metadata.decomposition);
-      if (!decomposition.success) add('decomposition', 'Nested block requires trigger 1..5 and evidence paths for the current requirement/ADR/scenario/risk/quality requirement');
-      else for (const evidence of decomposition.data.evidence) ref(evidence, 'decomposition', (doc, target) => ['requirement', 'adr'].includes(doc.metadata.type) || doc.metadata.kind === 'runtime-scenario' || [workspace.config.sections['10_quality_requirements'], workspace.config.sections['11_technical_risks']].includes(target));
-      add('decomposition-review', 'Review whether the selected trigger actually holds in the linked evidence; structural validation cannot establish that.', 'warning');
-    }
+
   }
   const runtimeRoot = dirname(workspace.config.sections['06_runtime_view']);
   const scenarioPrefix = join(runtimeRoot, 'scenarios').split('\\').join('/') + '/';
@@ -184,13 +150,16 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
       const target = resolveLocal(workspace, path, href);
       if (!target) return;
       if (target.absolute !== safePath(workspace.root, path) && !existsSync(target.absolute)) throw new Error('File not found');
+      if (target.fragment && lstatSync(target.absolute).size > DEFAULT_LIMITS.maxBytes) throw new Error('Anchor target exceeds maxBytes');
       if (metadata.status === 'active' && target.absolute !== safePath(workspace.root, path) && extname(target.absolute).toLowerCase() === '.md') {
         try {
-          const referenced = parseDocument(readFileSync(target.absolute, 'utf8'));
-          if (['deprecated', 'superseded'].includes(referenced.metadata.status)) add('inactive-reference', 'Active document links to inactive source: ' + href, 'warning');
+          const targetPath = relative(workspace.root, target.absolute).split('\\').join('/');
+          if (lstatSync(target.absolute).size > DEFAULT_LIMITS.maxBytes) throw new Error('Metadata target exceeds maxBytes');
+          const referenced = documentMetadata(readFileSync(target.absolute, 'utf8'));
+          if (isArc42Document(workspace, targetPath, referenced) && ['deprecated', 'superseded'].includes(String(referenced.status))) add('inactive-reference', 'Active document links to inactive source: ' + href, 'warning');
         } catch { /* Malformed target is reported by its own metadata check. */ }
       }
-      if (target.fragment && extname(target.absolute) === '.md') {
+      if (target.fragment && extname(target.absolute).toLowerCase() === '.md') {
         const targetContent = target.absolute === safePath(workspace.root, path) ? content : readFileSync(target.absolute, 'utf8');
         let targetBody = targetContent;
         try { targetBody = parseDocument(targetContent).body; } catch { /* Legacy text is still addressable. */ }
@@ -220,13 +189,17 @@ export function validateWorkspace(workspace: ProductWorkspace, limits = DEFAULT_
     if (!isFile(workspace.config.sections[section])) issues.push({ code: 'required-section', path: workspace.config.sections[section], severity: 'error', message: 'Required arc42 section must be a regular file' });
   }
   if (!isFile('README.md')) issues.push({ code: 'index', path: 'README.md', severity: 'error', message: 'Documentation index must be a regular file' });
+  let checkedFiles = 0;
   for (const path of scan.paths.filter(path => path.toLowerCase().endsWith('.md'))) {
-    try { issues.push(...documentIssues(workspace, path, readFileSync(safePath(workspace.root, path), 'utf8'))); }
-    catch (error) { issues.push({ code: 'read', path, severity: 'error', message: String(error) }); }
+    try {
+      const bytes = readFileSync(safePath(workspace.root, path));
+      const content = bytes.toString('utf8');
+      const metadata = documentMetadata(content);
+      if (!isArc42Document(workspace, path, metadata)) continue;
+      checkedFiles++;
+      if (!isUtf8(bytes)) { issues.push({ code: 'encoding', path, severity: 'error', message: 'Managed arc42 document is not UTF-8' }); continue; }
+      issues.push(...documentIssues(workspace, path, content));
+    } catch (error) { issues.push({ code: 'read', path, severity: 'error', message: String(error) }); }
   }
-  for (const path of scan.paths.filter(path => /^requirements\//.test(path))) {
-    const description = join(dirname(path), 'описание.md').split('\\').join('/');
-    if (!existsSync(safePath(workspace.root, description))) issues.push({ code: 'requirement-layout', path, severity: 'error', message: 'Request folder requires описание.md' });
-  }
-  return { valid: !scan.truncated && !issues.some(issue => issue.severity === 'error'), issues, checkedFiles: scan.paths.length, truncated: scan.truncated, limits, scope: 'Configured docsDir; syntax, paths and explicit document relations. Semantic truth, code symbols and external URLs require review.' };
+  return { valid: !scan.truncated && !issues.some(issue => issue.severity === 'error'), issues, checkedFiles, truncated: scan.truncated, limits, scope: 'Configured arc42 sections, owned subsections and index only. External artifacts are link targets, never schema-validated. Semantic truth and external URLs require review.' };
 }

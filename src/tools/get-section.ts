@@ -25,7 +25,7 @@ This tool retrieves the current content of any of the 12 arc42 sections, plus me
 
 Use this tool:
 - BEFORE updating a section with update-section, to review and build upon existing content
-- Before appending ADRs to section 09_architecture_decisions, to determine the next ADR number
+- Before adding architecture decision overview entries and links to separately maintained ADRs in section 9
 - When reviewing existing documentation
 
 This tool is read-only. You can optionally specify a targetFolder to read documentation from a specific directory instead of the default workspace.`;

@@ -27,7 +27,7 @@ const formatValues = FORMAT_INPUT_VALUES as unknown as [string, ...string[]];
 export const arc42InitInputSchema = {
   profile: z.enum(['upstream', 'product']).optional().describe('product creates a configurable Markdown docs tree; upstream keeps the original workspace'),
   docsDir: z.string().optional().describe('Product profile: relative documentation root, default docs'),
-  scaffold: z.enum(['minimal', 'full']).optional().describe('Product profile: minimal creates index, requirement and Level 1; full creates all 12 section drafts'),
+  scaffold: z.enum(['full']).optional().describe('Product profile always creates all 12 arc42 drafts and an index'),
   sections: z.record(z.enum(ARC42_SECTIONS as unknown as [Arc42Section, ...Arc42Section[]]), z.string()).optional().describe('Product profile: override section-to-Markdown-path mapping, relative to docsDir'),
   projectName: z.string().describe('Name of the project being documented'),
   force: z.boolean().optional().describe('Force re-initialization even if the workspace exists. WARNING: this overwrites ALL existing section files with fresh templates — existing content is lost. Confirm with the user first.'),
@@ -38,7 +38,9 @@ export const arc42InitInputSchema = {
 
 export const arc42InitDescription = `Initialize the arc42 documentation workspace for a project.
 
-This tool creates the arc42-docs/ directory with all 12 section template files, config.yaml (persisting the chosen language and format), a README, and a main documentation file.
+With profile: product, creates .arc42.yaml, a configurable Markdown docsDir, all 12 section drafts and an arc42 index with mandatory YAML frontmatter. It creates no ADRs, requirements or plans and never overwrites existing documentation.
+
+With the upstream profile, this tool creates the arc42-docs/ directory with all 12 section template files, config.yaml (persisting the chosen language and format), a README, and a main documentation file.
 
 Run this ONCE at the beginning of a documentation effort, after reading arc42-workflow-guide. If the workspace may already exist, check with arc42-status first — use update-section to write content, NOT re-initialization.
 

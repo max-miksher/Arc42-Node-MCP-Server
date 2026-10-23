@@ -1,5 +1,6 @@
 /** Fork extension: opt-in Markdown profile; upstream workspaces retain their contract. */
 import { createHash, randomUUID } from 'node:crypto';
+import { isUtf8 } from 'node:buffer';
 import {
   closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync,
   renameSync, statSync, unlinkSync, writeFileSync,
@@ -26,7 +27,7 @@ export const DEFAULT_SECTIONS: Record<Arc42Section, string> = {
   '11_technical_risks': 'architecture/11-risks-and-technical-debt.md',
   '12_glossary': 'architecture/12-glossary.md',
 };
-export const DOCUMENT_TYPES = ['architecture', 'adr', 'requirement', 'how-to', 'reference', 'tutorial', 'explanation', 'note', 'plan', 'index', 'policy'] as const;
+export const DOCUMENT_TYPES = ['architecture', 'index'] as const;
 export const DOCUMENT_STATUSES = ['draft', 'active', 'deprecated', 'superseded'] as const;
 export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   const date = new Date(value + 'T00:00:00Z');
@@ -36,6 +37,8 @@ export const metadataSchema = z.object({
   title: z.string().trim().min(1), type: z.enum(DOCUMENT_TYPES),
   status: z.enum(DOCUMENT_STATUSES), updated: dateSchema,
   superseded_by: z.string().min(1).optional(),
+  kind: z.enum(['subsection', 'building-block', 'runtime-scenario']).optional(),
+  section: z.enum(ARC42_SECTIONS as unknown as [Arc42Section, ...Arc42Section[]]).optional(),
 }).passthrough().superRefine((value, ctx) => {
   if (value.status === 'superseded' && !value.superseded_by) {
     ctx.addIssue({ code: 'custom', message: 'superseded requires superseded_by' });
@@ -97,13 +100,35 @@ function validateConfig(config: ProductConfig): void {
   if (Object.keys(config.sections).length !== ARC42_SECTIONS.length || new Set(paths).size !== paths.length) {
     throw new Error('Section mapping must contain exactly 12 unique paths');
   }
-  const reserved = ['README.md', 'requirements', 'notes', 'plans', 'how-to', 'reference', 'tutorials', 'explanation'];
+  const reserved = ['README.md'];
   for (const path of paths) {
     if (reserved.some(name => path === name || path.startsWith(name + '/')) || paths.some(other => path.startsWith(other + '/'))) {
       throw new Error('Overlapping or reserved section mapping: ' + path);
     }
   }
   if (!config.requiredSections.includes('05_building_block_view')) throw new Error('Level 1 building block view is required');
+}
+
+/** Child pages declare their owning section; conventional blocks/scenarios remain supported. */
+export function sectionForDocument(workspace: ProductWorkspace, path: string, metadata: Record<string, unknown> = {}): Arc42Section | null {
+  safePath(workspace.root, path);
+  const mapped = ARC42_SECTIONS.find(section => workspace.config.sections[section] === path);
+  if (mapped) return mapped;
+  const belongsTo = (section: Arc42Section) => {
+    const directory = dirname(workspace.config.sections[section]);
+    return directory === '.' || path.startsWith(directory + '/');
+  };
+  if (ARC42_SECTIONS.includes(metadata.section as Arc42Section) && belongsTo(metadata.section as Arc42Section)) return metadata.section as Arc42Section;
+  if (metadata.type !== undefined && metadata.type !== 'architecture') return null;
+  for (const section of ['05_building_block_view', '06_runtime_view'] as const) {
+    const local = relative(dirname(workspace.config.sections[section]), path).split('\\').join('/');
+    if (section === '05_building_block_view' && /^(?:building-blocks\/[^/]+\/)+README\.md$/.test(local)) return section;
+    if (section === '06_runtime_view' && /^scenarios\/.+\.md$/i.test(local)) return section;
+  }
+  return null;
+}
+export function isArc42Document(workspace: ProductWorkspace, path: string, metadata: Record<string, unknown> = {}): boolean {
+  return path === 'README.md' || sectionForDocument(workspace, path, metadata) !== null;
 }
 
 export function loadProduct(context: ToolContext, targetFolder?: unknown): ProductWorkspace | null {
@@ -135,6 +160,14 @@ export function parseDocument(content: string): { metadata: z.infer<typeof metad
   if (!match) throw new Error('Markdown must start with YAML frontmatter');
   return { metadata: metadataSchema.parse(parse(match[1], { maxAliasCount: 20 })), body: content.slice(match[0].length) };
 }
+/** Ownership discovery reads YAML only; external document schemas are never validated. */
+export function documentMetadata(content: string): Record<string, unknown> {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content);
+  try {
+    const value: unknown = match ? parse(match[1], { maxAliasCount: 20 }) : null;
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  } catch { return {}; }
+}
 export function readDocument(workspace: ProductWorkspace, path: string) {
   const raw = readRawDocument(workspace, path, true);
   return { ...raw, metadata: raw.metadata! };
@@ -143,8 +176,12 @@ export function readDocument(workspace: ProductWorkspace, path: string) {
 /** Raw reads allow repairing legacy/broken metadata through the same CAS path. */
 export function readRawDocument(workspace: ProductWorkspace, path: string, throwOnMetadataError = false) {
   const absolute = safePath(workspace.root, path);
-  if (!path.endsWith('.md')) throw new Error('Expected a .md document');
-  const content = readFileSync(absolute, 'utf8');
+  if (!path.toLowerCase().endsWith('.md')) throw new Error('Expected a .md document');
+  const stats = lstatSync(absolute);
+  if (!stats.isFile() || stats.size > 10_000_000) throw new Error('Document must be a regular file no larger than 10 MB');
+  const bytes = readFileSync(absolute);
+  if (!isUtf8(bytes)) throw new Error('Document is not UTF-8; review its encoding before editing');
+  const content = bytes.toString('utf8');
   let metadata: z.infer<typeof metadataSchema> | null = null;
   let metadataError: string | null = null;
   try { metadata = parseDocument(content).metadata; }
@@ -152,6 +189,7 @@ export function readRawDocument(workspace: ProductWorkspace, path: string, throw
     if (throwOnMetadataError) throw error;
     metadataError = String(error);
   }
+  if (!isArc42Document(workspace, path, documentMetadata(content))) throw new Error('Only configured arc42 sections, their owned subsections and the arc42 index are managed');
   return { path: absolute, relativePath: path, content, sha256: sha256(content), metadata, metadataError, wordCount: countWords(content) };
 }
 
@@ -185,7 +223,7 @@ export function writeDocument(workspace: ProductWorkspace, path: string, content
     const errors = documentIssues(workspace, path, content).filter(issue => issue.severity === 'error');
     if (errors.length) throw new Error(errors.map(issue => issue.code + ': ' + issue.message).join('\n'));
     const absolute = safePath(workspace.root, path);
-    if (!path.endsWith('.md')) throw new Error('Expected a .md document');
+    if (!path.toLowerCase().endsWith('.md')) throw new Error('Expected a .md document');
     const exists = existsSync(absolute);
     if (exists && (!expectedHash || sha256(readFileSync(absolute)) !== expectedHash)) throw new Error('Version conflict: read document again and supply its current expectedHash');
     if (!exists && expectedHash) throw new Error('Version conflict: document no longer exists');
@@ -205,6 +243,7 @@ export function initializeProduct(args: Record<string, unknown>, context: ToolCo
   const projectPath = projectRoot(context, args.targetFolder);
   if (args.force) throw new Error('force is not supported by product profile; existing documents must be preserved');
   if (args.format && args.format !== 'markdown' && args.format !== 'md') throw new Error('Product profile requires Markdown');
+  if (args.scaffold !== undefined && args.scaffold !== 'full') throw new Error('New arc42 workspaces require a full scaffold');
   const overrides = z.record(z.enum(ARC42_SECTIONS as unknown as [Arc42Section, ...Arc42Section[]]), z.string()).parse(args.sections ?? {});
   const docsDir = z.string().parse(args.docsDir ?? 'docs');
   if (docsDir.split('/').some(part => ['.arc42.yaml', '.arc42.lock', 'arc42-docs', 'vendor', 'dist', 'build', 'coverage', '.superpowers'].includes(part))) throw new Error('docsDir collides with service files or generated trees');
@@ -212,7 +251,7 @@ export function initializeProduct(args: Record<string, unknown>, context: ToolCo
     version: 1, profile: 'product', projectName: args.projectName,
     docsDir, language: String(args.language ?? 'EN').toUpperCase(),
     sections: { ...DEFAULT_SECTIONS, ...overrides },
-    requiredSections: args.scaffold === 'full' ? [...ARC42_SECTIONS] : ['05_building_block_view'],
+    requiredSections: [...ARC42_SECTIONS],
     arc42: getArc42ReferenceConfig(),
   });
   validateConfig(config);
@@ -221,12 +260,10 @@ export function initializeProduct(args: Record<string, unknown>, context: ToolCo
   if (existsSync(root) || existsSync(configPath) || existsSync(join(projectPath, 'arc42-docs'))) {
     throw new Error('Workspace already exists; use arc42-status and arc42-inventory. Initialization never overwrites or migrates existing docs.');
   }
-  const requirement = `requirements/${today()}-initialize-architecture/описание.md`;
   const documents = new Map<string, string>();
-  documents.set(requirement, markdown('Инициализация архитектурной документации', 'requirement', '# Требование\n\nСоздать и вести архитектурную документацию проекта ' + config.projectName + ' по arc42 с локальным профилем. Существующие материалы мигрировать только отдельными согласованными изменениями.'));
   for (const section of config.requiredSections) {
     const title = getSectionMetadata(section, config.language).title;
-    const body = args.scaffold === 'full' ? getTemplateForFormat(section, config.language, 'markdown') : '# ' + title + '\n\nLevel 1: архитектурные границы и ответственности необходимо уточнить по коду и требованиям.';
+    const body = getTemplateForFormat(section, config.language, 'markdown');
     documents.set(config.sections[section], markdown(title, 'architecture', body));
   }
   const links = [...documents.keys()].map(path => `- [${path}](${encodeURI(path)})`).join('\n');
@@ -242,7 +279,7 @@ export function initializeProduct(args: Record<string, unknown>, context: ToolCo
     }
     // Publish configuration last; partial initialization remains visible and cannot be overwritten.
     writeFileSync(configPath, stringify(config), { flag: 'wx' });
-    return { success: true, message: 'Product workspace initialized; no existing documentation migrated.', data: { workspaceRoot: root, profile: 'product', projectName: config.projectName, format: 'markdown', language: config.language, sectionsCreated: config.requiredSections.length, requirement, config }, nextSteps: ['Read the requirement and Level 1; create only documents needed now.', 'Run arc42-validate after edits.'] };
+    return { success: true, message: 'Product workspace initialized; no existing documentation migrated.', data: { workspaceRoot: root, profile: 'product', projectName: config.projectName, format: 'markdown', language: config.language, sectionsCreated: config.requiredSections.length, config }, nextSteps: ['Review all 12 arc42 drafts and document verified architectural facts. External ADRs and requirements remain independently managed.', 'Run arc42-validate after edits.'] };
   });
 }
 

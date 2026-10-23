@@ -13,7 +13,7 @@ export function scanLimits(args: { maxFiles?: number; maxBytes?: number; maxDept
   return { maxFiles: args.maxFiles ?? DEFAULT_LIMITS.maxFiles, maxBytes: args.maxBytes ?? DEFAULT_LIMITS.maxBytes, maxDepth: args.maxDepth ?? DEFAULT_LIMITS.maxDepth };
 }
 export const arc42ValidateInputSchema = { targetFolder: z.string().optional(), ...scanLimitSchema };
-export const arc42ValidateDescription = 'Validate product-profile structure, YAML metadata, Markdown links/anchors, MADR, nested building blocks, runtime participants, superseded chains and explicit relations. Read-only. Errors or scan truncation return valid=false. This cannot prove architectural truth or check external URLs/code symbols.';
+export const arc42ValidateDescription = 'Validate arc42 structure, YAML metadata, Markdown links/anchors, nested building blocks, runtime participants and explicit arc42 relations. External artifacts are checked only as link targets; their formats and lifecycles are outside scope. Read-only. Errors or scan truncation return valid=false. This cannot prove architectural truth or check external URLs/code symbols.';
 export async function arc42ValidateHandler(args: Record<string, unknown>, context: ToolContext): Promise<ToolResponse> {
   try {
     const input = z.object(arc42ValidateInputSchema).parse(args);

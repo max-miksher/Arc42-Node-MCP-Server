@@ -25,7 +25,7 @@ describe('product profile workspace', () => {
     return JSON.parse(response.content[0].text);
   }
 
-  it('initializes only useful documents, metadata and an actual requirement', async () => {
+  it('initializes a complete arc42 scaffold without external artifacts', async () => {
     const result = await init();
     expect(result.success).toBe(true);
     expect(existsSync(join(context.projectPath, '.arc42.yaml'))).toBe(true);
@@ -38,8 +38,9 @@ describe('product profile workspace', () => {
     expect(content).toContain('type: architecture');
     expect(existsSync(join(root, 'notes'))).toBe(false);
     expect(existsSync(join(root, 'architecture/06-runtime-view/scenarios'))).toBe(false);
-    expect(result.data.requirement).toMatch(/requirements\/\d{4}-\d{2}-\d{2}-[^/]+\/описание.md/);
-    expect(readFileSync(join(root, result.data.requirement), 'utf8')).toContain('type: requirement');
+    expect(result.data.requirement).toBeUndefined();
+    expect(result.data.sectionsCreated).toBe(12);
+    expect(existsSync(join(root, 'requirements'))).toBe(false);
   });
 
   it('supports a full scaffold, custom roots and section mapping through existing tools', async () => {
@@ -128,7 +129,7 @@ describe('product profile workspace', () => {
   });
 
   it('initializes a missing target project and rejects conflicting document roles', async () => {
-    expect((await init({ sections: { [section]: 'notes/level1.md' } })).success).toBe(false);
+    expect((await init({ sections: { [section]: 'README.md' } })).success).toBe(false);
     const targetFolder = join(context.projectPath, 'new-project');
     const created = await init({ targetFolder });
     expect(created.success).toBe(true);

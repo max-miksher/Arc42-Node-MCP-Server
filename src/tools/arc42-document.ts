@@ -10,7 +10,7 @@ export const arc42DocumentInputSchema = {
   oldText: z.string().min(1).optional(), newText: z.string().optional(),
   targetFolder: z.string().optional(),
 };
-export const arc42DocumentDescription = 'Read, create or edit a product-profile Markdown document. Read returns SHA-256. Edit requires expectedHash and a single exact oldText match; stale or ambiguous edits leave the file unchanged. All files require YAML frontmatter. Paths are relative to docsDir. Create never overwrites. Use separate MADR files and link them from section 9.';
+export const arc42DocumentDescription = 'Read, create or edit configured arc42 sections and owned subsections only. Child pages declare section (arc42 section ID) in YAML, or use building-block/runtime-scenario layout. Read returns SHA-256; edit requires expectedHash and one exact oldText match. All managed Markdown requires YAML frontmatter. Paths are docsDir-relative. Create never overwrites. External ADRs, requirements, plans and other methodology artifacts are independently managed; sections 1 and 9 link to them.';
 export async function arc42DocumentHandler(args: Record<string, unknown>, context: ToolContext): Promise<ToolResponse> {
   try {
     const input = z.object(arc42DocumentInputSchema).parse(args);

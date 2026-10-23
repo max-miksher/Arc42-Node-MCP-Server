@@ -154,7 +154,7 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
         'update-section'
       ]));
       expect(names).toContain('arc42-document');
-      expect(names).toEqual(expect.arrayContaining(['arc42-validate', 'arc42-inventory', 'arc42-migration-plan']));
+      expect(names).toEqual(expect.arrayContaining(['arc42-validate', 'arc42-inventory', 'arc42-recover']));
     });
 
     it('should accept format aliases md/adoc in every format-bearing tool', async () => {
@@ -183,7 +183,7 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
       expect(updateSection.inputSchema?.properties?.mode?.enum).toEqual(['replace', 'append']);
     });
 
-    it('should warn about append mode for ADRs in the update-section description', async () => {
+    it('should warn about replace and describe append mode in the update-section description', async () => {
       const tools = await client.listTools();
       const updateSection = tools.find(t => t.name === 'update-section')!;
       expect(updateSection.description).toContain('append');
@@ -258,7 +258,7 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
     it('step 5: update-section applies the replace default when mode is omitted', async () => {
       const { isError, payload } = await client.callTool('update-section', {
         section: '09_architecture_decisions',
-        content: '== Architecture Decisions\n\n=== ADR-001: Use PostgreSQL\n\n*Status:* Accepted',
+        content: '== Architecture Decisions\n\n=== Storage decision overview\n\n*Status:* Accepted',
         targetFolder: target.path
       });
       expect(isError).toBe(false);
@@ -268,10 +268,10 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
       expect(payload!.data.path).toBeTruthy();
     });
 
-    it('step 5b: append mode preserves existing ADRs (ADR flow)', async () => {
+    it('step 5b: append mode preserves existing decision overview entries', async () => {
       const { isError, payload } = await client.callTool('update-section', {
         section: '09_architecture_decisions',
-        content: '=== ADR-002: Use Redis for caching\n\n*Status:* Accepted',
+        content: '=== Cache decision overview\n\n*Status:* Accepted',
         mode: 'append',
         targetFolder: target.path
       });
@@ -279,14 +279,14 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
       expect(payload!.data.mode).toBe('append');
     });
 
-    it('step 6: get-section returns both ADRs with file metadata', async () => {
+    it('step 6: get-section returns both decision overviews with file metadata', async () => {
       const { isError, payload } = await client.callTool('get-section', {
         section: '09_architecture_decisions',
         targetFolder: target.path
       });
       expect(isError).toBe(false);
-      expect(payload!.data.content).toContain('ADR-001');
-      expect(payload!.data.content).toContain('ADR-002');
+      expect(payload!.data.content).toContain('Storage decision overview');
+      expect(payload!.data.content).toContain('Cache decision overview');
       const metadata = payload!.data.metadata;
       expect(metadata.path).toBeTruthy();
       expect(metadata.lastModified).toBeTruthy();
@@ -340,7 +340,7 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
     });
   });
 
-  it('supports a product workspace through the built stdio server with safe patching and read-only migration', async () => {
+  it('supports a product workspace through the built stdio server with safe patching and arc42-only validation', async () => {
     const product = createTempDir('arc42-product-protocol');
     try {
       const initialized = await client.callTool('arc42-init', {

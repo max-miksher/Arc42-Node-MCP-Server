@@ -1,7 +1,7 @@
 {
   "name": "@max-miksher/arc42-node-mcp-server",
   "version": "2.4.0-profile.1",
-  "description": "Arc42 MCP Server fork with configurable product documentation, safe edits, validation and scoped migration",
+  "description": "Arc42 MCP Server fork with configurable arc42 documentation, safe edits, validation and read-only legacy recovery",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
@@ -66,6 +66,7 @@
   "homepage": "https://github.com/max-miksher/Arc42-Node-MCP-Server#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "entities": "^7.0.1",
     "marked": "^18.1.1",
     "yaml": "^2.8.4",
     "zod": "^3.25.76"
