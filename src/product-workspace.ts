@@ -166,7 +166,16 @@ export function documentMetadata(content: string): Record<string, unknown> {
   try {
     const value: unknown = match ? parse(match[1], { maxAliasCount: 20 }) : null;
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-  } catch { return {}; }
+  } catch {
+    // Retain explicit top-level ownership when another YAML field is broken.
+    // Only standalone scalars count; indented literal-block content cannot claim ownership.
+    const declarations: Record<string, unknown> = {};
+    for (const field of ['section', 'kind', 'type']) {
+      const matches = [...(match?.[1] ?? '').matchAll(new RegExp('^' + field + ': *["\']?([a-z0-9_-]+)["\']? *(?:#.*)?$', 'gm'))];
+      if (matches.length === 1) declarations[field] = matches[0][1];
+    }
+    return declarations;
+  }
 }
 export function readDocument(workspace: ProductWorkspace, path: string) {
   const raw = readRawDocument(workspace, path, true);

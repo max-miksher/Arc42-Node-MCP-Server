@@ -176,4 +176,32 @@ describe('arc42 validation and incremental recovery', () => {
     expect((await call('arc42-document', { action: 'read', path: DEFAULT_SECTIONS['01_introduction_and_goals'] })).success).toBe(false);
     expect(readFileSync(file)).toEqual(bytes);
   });
+  it('creates a new subsection with a self anchor before its file exists', async () => {
+    const result = await call('arc42-document', { action: 'create', path: child, content: markdown('New', 'architecture', '# New\n\n[Jump](#new)', owned) });
+    expect(result.success, result.message).toBe(true);
+  });
+
+  it('reports malformed YAML in an explicitly owned child and lists unassigned documents', async () => {
+    put(child, markdown('Child', 'architecture', '# Child', owned).replace('title: Child', 'title: [Child'));
+    put('adr/legacy.md', '# External decision');
+    const result = await call('arc42-validate');
+    expect(result.data.valid).toBe(false);
+    expect(result.data.issues).toContainEqual(expect.objectContaining({ path: child, code: 'metadata' }));
+    expect(result.data.unassignedFiles).toContain('adr/legacy.md');
+  });
+
+  it('can recover evidence when a mapped section is not yet present in an older workspace', async () => {
+    const configPath = join(context.projectPath, '.arc42.yaml');
+    const config = parse(readFileSync(configPath, 'utf8'));
+    config.requiredSections = ['05_building_block_view'];
+    writeFileSync(configPath, stringify(config));
+    unlinkSync(join(context.projectPath, 'docs', DEFAULT_SECTIONS['03_context_and_scope']));
+    writeFileSync(join(context.projectPath, 'old.md'), '# Architecture');
+    const result = await call('arc42-recover', { source: 'old.md', section: '03_context_and_scope' });
+    expect(result.success).toBe(true);
+    expect(result.data.targetExists).toBe(false);
+    expect(result.data.targetHash).toBeNull();
+    expect(result.data.excerpt).toBe('# Architecture');
+  });
+
 });

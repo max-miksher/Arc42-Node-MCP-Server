@@ -23,7 +23,7 @@ export const arc42StatusInputSchema = {
 
 export const arc42StatusDescription = `Check the status of arc42 documentation.
 
-This tool reports which of the 12 sections have content (word counts, completeness 0-100%, last modified), overall progress, and the workspace's configured language and output format.
+In upstream workspaces, reports section word counts, estimated completeness 0-100%, last modified and overall progress. In product workspaces, reports mapped paths, existence, word counts, document status and required flags; no completeness score is claimed. Both modes report configured language and format. File presence and word counts do not establish architectural correctness.
 
 Use this tool:
 - To assess an existing workspace before making changes

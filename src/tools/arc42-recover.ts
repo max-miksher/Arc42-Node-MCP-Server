@@ -1,6 +1,6 @@
 /** Read one legacy source for human review against an arc42 section; never migrate it. */
 import { isUtf8 } from 'node:buffer';
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname } from 'node:path';
 import { z } from 'zod';
 import { ARC42_SECTIONS, getErrorMessage, type Arc42Section, type ToolContext, type ToolResponse } from '../types.js';
@@ -13,7 +13,7 @@ export const arc42RecoverInputSchema = {
   offset: z.number().int().min(0).optional().describe('UTF-16 character offset for a bounded source excerpt; default 0'),
   maxChars: z.number().int().min(1).max(50000).optional().describe('Maximum source characters returned; default 12000'),
 };
-export const arc42RecoverDescription = 'Read one selected legacy source and the current mapped arc42 section hash for incremental architectural recovery. Returns bounded source text, original-byte SHA-256 and explicit nextOffset/truncation. Never copies, rewrites, deletes, creates plans or changes source status. Review evidence before using arc42-document to patch verified facts into arc42; external artifacts stay independently managed.';
+export const arc42RecoverDescription = 'Read one selected legacy source and the mapped arc42 section hash (null when not yet created) for incremental architectural recovery. Returns bounded source text, original-byte SHA-256 and explicit nextOffset/truncation. Never copies, rewrites, deletes, creates plans or changes source status. Review evidence before using arc42-document to patch verified facts into arc42; external artifacts stay independently managed.';
 export async function arc42RecoverHandler(args: Record<string, unknown>, context: ToolContext): Promise<ToolResponse> {
   try {
     const input = z.object(arc42RecoverInputSchema).parse(args);
@@ -29,12 +29,14 @@ export async function arc42RecoverHandler(args: Record<string, unknown>, context
     if (offset > content.length) throw new Error('offset exceeds source length');
     const excerpt = content.slice(offset, offset + (input.maxChars ?? 12000));
     const nextOffset = offset + excerpt.length;
-    const target = readRawDocument(workspace, workspace.config.sections[input.section]);
+    const target = workspace.config.sections[input.section];
+    const targetExists = existsSync(safePath(workspace.root, target));
+    const targetHash = targetExists ? readRawDocument(workspace, target).sha256 : null;
     return { success: true, message: 'Read-only architectural evidence; no files changed.', data: {
       source: input.source, sourceHash: sha256(bytes), bytes: bytes.length, offset, excerpt,
       truncated: nextOffset < content.length, nextOffset: nextOffset < content.length ? nextOffset : null,
-      section: input.section, target: target.relativePath, targetHash: target.sha256,
+      section: input.section, target, targetExists, targetHash,
       requiresReview: true,
-    }, nextSteps: ['Check architectural facts against current code and identify uncertainties.', 'Patch only verified facts into the arc42 section or an owned subsection using arc42-document and its current hash.', 'Keep source files untouched; validate arc42 and review semantic consistency.'] };
+    }, nextSteps: ['Check architectural facts against current code and identify uncertainties.', targetExists ? 'Patch only verified facts using arc42-document and the current target hash.' : 'Create the missing mapped arc42 section with verified facts and required frontmatter using arc42-document create.', 'Keep source files untouched; validate arc42 and review semantic consistency.'] };
   } catch (error) { return { success: false, message: getErrorMessage(error) }; }
 }

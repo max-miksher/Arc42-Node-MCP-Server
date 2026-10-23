@@ -14,7 +14,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, type ChildProcess } from 'child_process';
-import { existsSync, readdirSync, rmSync } from 'fs';
+import { existsSync, readdirSync, rmSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ToolResponse } from '../../types.js';
@@ -371,6 +371,15 @@ describe.skipIf(!existsSync(SERVER_ENTRY))('MCP protocol contract (requires npm 
       expect(inventory.isError).toBe(false);
       expect(inventory.payload!.data.files.length).toBeGreaterThanOrEqual(3);
       expect(inventory.payload!.data.truncated).toBe(false);
+      const legacy = '# Architecture\n\nAPI calls storage.';
+      writeFileSync(join(product.path, 'legacy.md'), legacy);
+      const recovered = await client.callTool('arc42-recover', { source: 'legacy.md', section: '03_context_and_scope', maxChars: 8, targetFolder: product.path });
+      expect(recovered.isError).toBe(false);
+      expect(recovered.payload!.data.excerpt).toBe(legacy.slice(0, 8));
+      expect(recovered.payload!.data.truncated).toBe(true);
+      expect(readFileSync(join(product.path, 'legacy.md'), 'utf8')).toBe(legacy);
+      const forbidden = await client.callTool('arc42-document', { action: 'create', path: 'plans/task.md', content: '# Plan', targetFolder: product.path });
+      expect(forbidden.isError).toBe(true);
       const wrongArgs = await client.callTool('arc42-document', { action: 'edit', path: 'x.md', expectedHash: 'wrong', targetFolder: product.path });
       expect(wrongArgs.isError || wrongArgs.protocolError).toBeTruthy();
     } finally { product.cleanup(); }

@@ -49,7 +49,7 @@ function anchors(body: string): Set<string> {
   }
   marked.walkTokens(tokens(body), (token: Token) => {
     if (token.type === 'heading') {
-      const text = decodeHTML(inlineText(token.tokens));
+      const text = decodeHTML(inlineText(token.tokens ?? marked.Lexer.lexInline(token.text)));
       const slug = text.toLowerCase().replace(/[^\p{L}\p{M}\p{N}_\-\s]/gu, '').replace(/\s/g, '-');
       let candidate = slug;
       for (let suffix = 1; ids.has(candidate); suffix++) candidate = slug + '-' + suffix;
@@ -150,7 +150,7 @@ export function documentIssues(workspace: ProductWorkspace, path: string, conten
       const target = resolveLocal(workspace, path, href);
       if (!target) return;
       if (target.absolute !== safePath(workspace.root, path) && !existsSync(target.absolute)) throw new Error('File not found');
-      if (target.fragment && lstatSync(target.absolute).size > DEFAULT_LIMITS.maxBytes) throw new Error('Anchor target exceeds maxBytes');
+      if (target.fragment && target.absolute !== safePath(workspace.root, path) && lstatSync(target.absolute).size > DEFAULT_LIMITS.maxBytes) throw new Error('Anchor target exceeds maxBytes');
       if (metadata.status === 'active' && target.absolute !== safePath(workspace.root, path) && extname(target.absolute).toLowerCase() === '.md') {
         try {
           const targetPath = relative(workspace.root, target.absolute).split('\\').join('/');
@@ -190,16 +190,17 @@ export function validateWorkspace(workspace: ProductWorkspace, limits = DEFAULT_
   }
   if (!isFile('README.md')) issues.push({ code: 'index', path: 'README.md', severity: 'error', message: 'Documentation index must be a regular file' });
   let checkedFiles = 0;
+  const unassignedFiles: string[] = [];
   for (const path of scan.paths.filter(path => path.toLowerCase().endsWith('.md'))) {
     try {
       const bytes = readFileSync(safePath(workspace.root, path));
       const content = bytes.toString('utf8');
       const metadata = documentMetadata(content);
-      if (!isArc42Document(workspace, path, metadata)) continue;
+      if (!isArc42Document(workspace, path, metadata)) { unassignedFiles.push(path); continue; }
       checkedFiles++;
       if (!isUtf8(bytes)) { issues.push({ code: 'encoding', path, severity: 'error', message: 'Managed arc42 document is not UTF-8' }); continue; }
       issues.push(...documentIssues(workspace, path, content));
     } catch (error) { issues.push({ code: 'read', path, severity: 'error', message: String(error) }); }
   }
-  return { valid: !scan.truncated && !issues.some(issue => issue.severity === 'error'), issues, checkedFiles, truncated: scan.truncated, limits, scope: 'Configured arc42 sections, owned subsections and index only. External artifacts are link targets, never schema-validated. Semantic truth and external URLs require review.' };
+  return { valid: !scan.truncated && !issues.some(issue => issue.severity === 'error'), issues, checkedFiles, unassignedFiles, truncated: scan.truncated, limits, scope: 'Configured arc42 sections, owned subsections and index only. Unassigned files are excluded; check ownership declarations if a page is missing. External artifacts are link targets, never schema-validated. Semantic truth and external URLs require review.' };
 }
