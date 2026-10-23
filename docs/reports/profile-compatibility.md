@@ -55,7 +55,7 @@ Critic независимо проверил snapshot 0cd1339 и воспрои�
 
 # Проверки сборки и поставки
 
-Baseline после исправления native OXC tsconfig discovery: 1308 исходных тестов. Текущий полный suite: 1341 тест в 26 файлах, включая собранный stdio MCP. Сборка TypeScript успешна. Coverage: statements 94,71%, branches 85,13%, functions 99,11%, lines 97,25%; пороги upstream пройдены.
+Baseline после исправления native OXC tsconfig discovery: 1308 исходных тестов. Текущий полный suite: 1341 тест в 26 файлах, включая собранный stdio MCP. Сборка TypeScript успешна. Финальный прогон через npm lifecycle: statements 94,58%, branches 84,99%, functions 99,11%, lines 97,18%; пороги upstream пройдены.
 
 Повторная установка из lockfile выполнена через `npm ci --offline --ignore-scripts --no-audit` из локального npm cache; обычный сетевой npm ci при завершающем прогоне завис на получении пакетов и был остановлен. Сборка и тесты после чистой offline-установки прошли. Дополнительно проверены 33 конфигурации: 22 сочетания 11 языков с Markdown/AsciiDoc upstream и 11 языков full product-профиля.
 
